@@ -110,7 +110,13 @@ DesktopPluginComponent {
         id: selectionClearTimer
         interval: 5000 // 5 seconds of inactivity
         repeat: false
-        onTriggered: root.selectedFilePath = ""
+        onTriggered: {
+            if (!renameDialog.opened && !quickMenu.opened) {
+                root.selectedFilePath = "";
+            } else {
+                selectionClearTimer.restart();
+            }
+        }
     }
 
     function getIconName(fileName, isDir) {
