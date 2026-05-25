@@ -312,11 +312,91 @@ DesktopPluginComponent {
                     }
                 }
 
-                // Right: Controls (View Mode & Sort By)
+                // Right: Controls (Search, View Mode & Sort By)
                 Row {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: Theme.spacingM
+                    spacing: Theme.spacingS
+
+                    // Compact Search Input
+                    Rectangle {
+                        id: headerSearchContainer
+                        width: headerSearchField.activeFocus || headerSearchField.text !== "" ? 120 : 64
+                        height: 20
+                        radius: 4
+                        color: Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.08 : 0.04)
+                        border.color: headerSearchField.activeFocus 
+                            ? Theme.primary 
+                            : Theme.withAlpha(Theme.surfaceText, 0.15)
+                        border.width: 1
+                        
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                        DankIcon {
+                            id: headerSearchIcon
+                            anchors.left: parent.left
+                            anchors.leftMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "search"
+                            size: 12
+                            color: Theme.surfaceText
+                            opacity: headerSearchField.activeFocus ? 1.0 : 0.5
+                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                        }
+
+                        TextInput {
+                            id: headerSearchField
+                            anchors.left: headerSearchIcon.right
+                            anchors.leftMargin: 4
+                            anchors.right: headerClearBtn.visible ? headerClearBtn.left : parent.right
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            font.pixelSize: Theme.fontSizeSmall - 1
+                            color: Theme.surfaceText
+                            selectByMouse: true
+                            
+                            // Placeholder Text
+                            Text {
+                                text: I18n.tr("Search...")
+                                font.pixelSize: Theme.fontSizeSmall - 1
+                                color: Theme.surfaceText
+                                opacity: 0.35
+                                visible: headerSearchField.text === "" && !headerSearchField.activeFocus
+                            }
+
+                            onTextChanged: root.searchPattern = text.trim()
+                        }
+
+                        // Clear button
+                        MouseArea {
+                            id: headerClearBtn
+                            width: 12
+                            height: 12
+                            anchors.right: parent.right
+                            anchors.rightMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: headerSearchField.text !== ""
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "close"
+                                size: 10
+                                color: Theme.surfaceText
+                                opacity: headerClearBtn.containsMouse ? 0.9 : 0.5
+                            }
+
+                            onClicked: {
+                                headerSearchField.text = "";
+                                headerSearchField.focus = false;
+                            }
+                        }
+                    }
 
                     // View Mode Button
                     MouseArea {
@@ -364,87 +444,10 @@ DesktopPluginComponent {
                     }
                 }
             }
-
-            // Sleek Search Bar
-            Rectangle {
-                id: searchBarContainer
-                width: parent.width
-                height: 32
-                radius: 6
-                color: Theme.withAlpha(Theme.surfaceContainerLow, 0.4)
-                border.color: searchField.activeFocus 
-                    ? Theme.primary 
-                    : Theme.withAlpha(Theme.outline, 0.15)
-                border.width: 1
-
-                Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                DankIcon {
-                    id: searchIcon
-                    anchors.left: parent.left
-                    anchors.leftMargin: Theme.spacingS
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: "search"
-                    size: 16
-                    color: Theme.surfaceText
-                    opacity: searchField.activeFocus ? 1.0 : 0.5
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
-                }
-
-                TextInput {
-                    id: searchField
-                    anchors.left: searchIcon.right
-                    anchors.leftMargin: Theme.spacingS
-                    anchors.right: clearBtn.visible ? clearBtn.left : parent.right
-                    anchors.rightMargin: Theme.spacingS
-                    anchors.verticalCenter: parent.verticalCenter
-                    font.pixelSize: Theme.fontSizeSmall
-                    color: Theme.surfaceText
-                    selectByMouse: true
-                    
-                    // Placeholder Text
-                    Text {
-                        text: I18n.tr("Search files...")
-                        font.pixelSize: Theme.fontSizeSmall
-                        color: Theme.surfaceText
-                        opacity: 0.4
-                        visible: searchField.text === "" && !searchField.activeFocus
-                    }
-
-                    onTextChanged: root.searchPattern = text.trim()
-                }
-
-                // Clear button
-                MouseArea {
-                    id: clearBtn
-                    width: 16
-                    height: 16
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.spacingS
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: searchField.text !== ""
-                    cursorShape: Qt.PointingHandCursor
-                    hoverEnabled: true
-                    
-                    DankIcon {
-                        anchors.centerIn: parent
-                        name: "close"
-                        size: 14
-                        color: Theme.surfaceText
-                        opacity: clearBtn.containsMouse ? 0.9 : 0.5
-                    }
-
-                    onClicked: {
-                        searchField.text = "";
-                        searchField.focus = false;
-                    }
-                }
-            }
-
             // Grid View container
             Item {
                 width: parent.width
-                height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0) - (searchBarContainer.height + parent.spacing)
+                height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0)
                 clip: true
 
                 FolderListModel {
