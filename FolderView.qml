@@ -469,10 +469,10 @@ DesktopPluginComponent {
                         height: 20
                         radius: 10
                         color: expanded 
-                            ? Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.08 : 0.04) 
+                            ? Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.12 : 0.08) 
                             : "transparent"
                         border.color: expanded 
-                            ? (headerSearchField.activeFocus ? Theme.primary : Theme.withAlpha(Theme.surfaceText, 0.15)) 
+                            ? (headerSearchField.activeFocus ? Theme.primary : Theme.withAlpha(Theme.surfaceText, 0.3)) 
                             : "transparent"
                         border.width: expanded ? 1 : 0
                         
