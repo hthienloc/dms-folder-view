@@ -98,6 +98,21 @@ DesktopPluginComponent {
     // Selected file tracking
     property string selectedFilePath: ""
 
+    onSelectedFilePathChanged: {
+        if (selectedFilePath !== "") {
+            selectionClearTimer.restart();
+        } else {
+            selectionClearTimer.stop();
+        }
+    }
+
+    Timer {
+        id: selectionClearTimer
+        interval: 5000 // 5 seconds of inactivity
+        repeat: false
+        onTriggered: root.selectedFilePath = ""
+    }
+
     function getIconName(fileName, isDir) {
         if (isDir) return "folder";
         
