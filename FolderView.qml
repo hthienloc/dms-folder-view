@@ -253,7 +253,7 @@ DesktopPluginComponent {
                     width: folderRow.implicitWidth
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: folderDropdown.open()
+                    onClicked: folderDropdown.opened ? folderDropdown.close() : folderDropdown.open()
 
                     Row {
                         id: folderRow
@@ -303,7 +303,7 @@ DesktopPluginComponent {
                         height: 20
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: viewModeDropdown.open()
+                        onClicked: viewModeDropdown.opened ? viewModeDropdown.close() : viewModeDropdown.open()
 
                         DankIcon {
                             anchors.centerIn: parent
@@ -322,7 +322,7 @@ DesktopPluginComponent {
                         height: 20
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: sortByDropdown.open()
+                        onClicked: sortByDropdown.opened ? sortByDropdown.close() : sortByDropdown.open()
 
                         DankIcon {
                             anchors.centerIn: parent
