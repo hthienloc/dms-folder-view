@@ -31,6 +31,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 | Left Click Folder Title | Open folder selection dropdown (Desktop, Downloads, Music, Videos, Documents, Trash, Home, Custom...) |
 | Left Click View Mode Icon | Open view mode selection dropdown (Grid, List, Compact) |
 | Left Click Sort Icon | Open sorting options dropdown (Name, Date, Size, Type) |
+| Left Click Zoom Icon | Open icon size selection dropdown (Small, Medium, Large, Extra Large) |
 | Left Click `+` Icon | Open creation dropdown (New Folder, New Document) |
 | Left Click File/Folder | Select/Highlight item |
 | Ctrl + Left Click File/Folder | Toggle selection of item (multi-select) |

@@ -621,6 +621,25 @@ DesktopPluginComponent {
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
+
+                    // Icon Size Button
+                    MouseArea {
+                        id: sizeBtn
+                        width: 20
+                        height: 20
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: sizeDropdown.open()
+
+                        DankIcon {
+                            anchors.centerIn: parent
+                            name: "zoom_in"
+                            size: 16
+                            color: sizeBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                            opacity: sizeBtn.containsMouse ? 1.0 : 0.7
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
                 }
             }
             // Grid View container
@@ -1874,6 +1893,94 @@ DesktopPluginComponent {
                                 sortByDropdown.close();
                                 if (pluginService) {
                                     pluginService.savePluginData(pluginId, "sortBy", modelData.value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Size Dropdown Popup
+    Popup {
+        id: sizeDropdown
+        parent: sizeBtn
+        width: 140
+        height: sizeDropdownColumn.implicitHeight + Theme.spacingS * 2
+        padding: 0
+        modal: true
+        dim: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        x: sizeBtn.width - sizeDropdown.width
+        y: sizeBtn.height + 4
+
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        contentItem: Rectangle {
+            color: Theme.surfaceContainer
+            radius: Theme.cornerRadius
+            border.color: Theme.withAlpha(Theme.outline, 0.15)
+            border.width: 1
+
+            Column {
+                id: sizeDropdownColumn
+                anchors.fill: parent
+                anchors.margins: Theme.spacingS
+                spacing: 2
+
+                Repeater {
+                    model: [
+                        { label: I18n.tr("Small (64px)"), value: 64, icon: "photo_size_select_small" },
+                        { label: I18n.tr("Medium (84px)"), value: 84, icon: "photo_size_select_large" },
+                        { label: I18n.tr("Large (104px)"), value: 104, icon: "photo_size_select_actual" },
+                        { label: I18n.tr("Extra Large (128px)"), value: 128, icon: "aspect_ratio" }
+                    ]
+
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 28
+                        radius: Theme.cornerRadius - 2
+                        color: sizeArea.containsMouse 
+                            ? Theme.withAlpha(Theme.primary, 0.15) 
+                            : "transparent"
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+
+                            DankIcon {
+                                name: modelData.icon
+                                size: 14
+                                color: root.cellSize === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.bold: root.cellSize === modelData.value
+                                color: root.cellSize === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        MouseArea {
+                            id: sizeArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                sizeDropdown.close();
+                                if (pluginService) {
+                                    pluginService.savePluginData(pluginId, "cellSize", modelData.value);
                                 }
                             }
                         }
