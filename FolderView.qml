@@ -560,6 +560,8 @@ DesktopPluginComponent {
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideRight
+                                    wrapMode: Text.NoWrap
+                                    maximumLineCount: 1
                                     width: parent.width - 32
                                 }
                             }
@@ -671,6 +673,8 @@ DesktopPluginComponent {
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideRight
+                                    wrapMode: Text.NoWrap
+                                    maximumLineCount: 1
                                     width: parent.width - 28
                                 }
                             }
