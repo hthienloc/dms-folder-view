@@ -482,6 +482,7 @@ DesktopPluginComponent {
                                         launchTimer.restart();
                                         // Open file/folder using default system application
                                         Quickshell.execDetached(["xdg-open", delegateRoot.filePath]);
+                                        root.selectedFilePath = "";
                                     }
                                 }
                             }
@@ -594,6 +595,7 @@ DesktopPluginComponent {
                                         listDelegateRoot.isLaunching = true;
                                         Quickshell.execDetached(["xdg-open", listDelegateRoot.filePath]);
                                         listLaunchTimer.restart();
+                                        root.selectedFilePath = "";
                                     }
                                 }
                             }
@@ -707,6 +709,7 @@ DesktopPluginComponent {
                                         compactDelegateRoot.isLaunching = true;
                                         Quickshell.execDetached(["xdg-open", compactDelegateRoot.filePath]);
                                         compactLaunchTimer.restart();
+                                        root.selectedFilePath = "";
                                     }
                                 }
                             }
@@ -792,6 +795,7 @@ DesktopPluginComponent {
                             action: function() {
                                 quickMenu.close();
                                 Quickshell.execDetached(["xdg-open", quickMenu.currentPath]);
+                                root.selectedFilePath = "";
                             }
                         },
                         {
