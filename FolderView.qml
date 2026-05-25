@@ -52,6 +52,9 @@ DesktopPluginComponent {
             case "documents":
                 path = home + "/Documents";
                 break;
+            case "trash":
+                path = home + "/.local/share/Trash/files";
+                break;
             case "custom":
                 if (customFolderPath && customFolderPath.trim() !== "") {
                     let clean = customFolderPath.trim();
@@ -75,6 +78,7 @@ DesktopPluginComponent {
             case "music": return I18n.tr("Music");
             case "videos": return I18n.tr("Videos");
             case "documents": return I18n.tr("Documents");
+            case "trash": return I18n.tr("Trash");
             case "custom":
                 if (customFolderPath) {
                     const parts = customFolderPath.trim().split("/");

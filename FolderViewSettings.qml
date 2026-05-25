@@ -82,6 +82,7 @@ PluginSettings {
                 { label: I18n.tr("Music"), value: "music" },
                 { label: I18n.tr("Videos"), value: "videos" },
                 { label: I18n.tr("Documents"), value: "documents" },
+                { label: I18n.tr("Trash"), value: "trash" },
                 { label: I18n.tr("Custom Folder..."), value: "custom" }
             ]
             defaultValue: "desktop"
