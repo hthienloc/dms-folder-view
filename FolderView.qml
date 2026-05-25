@@ -318,33 +318,51 @@ DesktopPluginComponent {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: Theme.spacingS
 
-                    // Compact Search Input
+                    // Premium Dynamic Expanding Search Input
                     Rectangle {
                         id: headerSearchContainer
-                        width: headerSearchField.activeFocus || headerSearchField.text !== "" ? 120 : 64
+                        
+                        // Toggle state based on focus or active text query
+                        readonly property bool expanded: headerSearchField.activeFocus || headerSearchField.text !== ""
+                        
+                        width: expanded ? 120 : 20
                         height: 20
                         radius: 4
-                        color: Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.08 : 0.04)
-                        border.color: headerSearchField.activeFocus 
-                            ? Theme.primary 
-                            : Theme.withAlpha(Theme.surfaceText, 0.15)
-                        border.width: 1
+                        color: expanded 
+                            ? Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.08 : 0.04) 
+                            : "transparent"
+                        border.color: expanded 
+                            ? (headerSearchField.activeFocus ? Theme.primary : Theme.withAlpha(Theme.surfaceText, 0.15)) 
+                            : "transparent"
+                        border.width: expanded ? 1 : 0
                         
                         anchors.verticalCenter: parent.verticalCenter
+                        clip: true
 
-                        Behavior on width { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Behavior on border.color { ColorAnimation { duration: 150 } }
 
+                        // Clicking on the container focuses the text input (which triggers expansion)
+                        MouseArea {
+                            anchors.fill: parent
+                            visible: !headerSearchContainer.expanded
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                headerSearchField.forceActiveFocus();
+                            }
+                        }
+
                         DankIcon {
                             id: headerSearchIcon
-                            anchors.left: parent.left
-                            anchors.leftMargin: 4
                             anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: headerSearchContainer.expanded ? 4 : (headerSearchContainer.width - size) / 2
                             name: "search"
-                            size: 12
+                            size: 14
                             color: Theme.surfaceText
-                            opacity: headerSearchField.activeFocus ? 1.0 : 0.5
+                            opacity: headerSearchField.activeFocus ? 1.0 : (headerSearchContainer.expanded ? 0.6 : 0.7)
                             Behavior on opacity { NumberAnimation { duration: 150 } }
                         }
 
@@ -358,6 +376,9 @@ DesktopPluginComponent {
                             font.pixelSize: Theme.fontSizeSmall - 1
                             color: Theme.surfaceText
                             selectByMouse: true
+                            visible: headerSearchContainer.expanded
+                            opacity: headerSearchContainer.expanded ? 1.0 : 0.0
+                            Behavior on opacity { NumberAnimation { duration: 150 } }
                             
                             // Placeholder Text
                             Text {
@@ -379,7 +400,7 @@ DesktopPluginComponent {
                             anchors.right: parent.right
                             anchors.rightMargin: 4
                             anchors.verticalCenter: parent.verticalCenter
-                            visible: headerSearchField.text !== ""
+                            visible: headerSearchContainer.expanded && headerSearchField.text !== ""
                             cursorShape: Qt.PointingHandCursor
                             hoverEnabled: true
                             
