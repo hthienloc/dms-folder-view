@@ -97,6 +97,7 @@ DesktopPluginComponent {
 
     // Selected file tracking
     property string selectedFilePath: ""
+    property string searchPattern: ""
 
     onSelectedFilePathChanged: {
         if (selectedFilePath !== "") {
@@ -364,10 +365,86 @@ DesktopPluginComponent {
                 }
             }
 
+            // Sleek Search Bar
+            Rectangle {
+                id: searchBarContainer
+                width: parent.width
+                height: 32
+                radius: 6
+                color: Theme.withAlpha(Theme.surfaceContainerLow, 0.4)
+                border.color: searchField.activeFocus 
+                    ? Theme.primary 
+                    : Theme.withAlpha(Theme.outline, 0.15)
+                border.width: 1
+
+                Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                DankIcon {
+                    id: searchIcon
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.spacingS
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "search"
+                    size: 16
+                    color: Theme.surfaceText
+                    opacity: searchField.activeFocus ? 1.0 : 0.5
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                }
+
+                TextInput {
+                    id: searchField
+                    anchors.left: searchIcon.right
+                    anchors.leftMargin: Theme.spacingS
+                    anchors.right: clearBtn.visible ? clearBtn.left : parent.right
+                    anchors.rightMargin: Theme.spacingS
+                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.surfaceText
+                    selectByMouse: true
+                    
+                    // Placeholder Text
+                    Text {
+                        text: I18n.tr("Search files...")
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.surfaceText
+                        opacity: 0.4
+                        visible: searchField.text === "" && !searchField.activeFocus
+                    }
+
+                    onTextChanged: root.searchPattern = text.trim()
+                }
+
+                // Clear button
+                MouseArea {
+                    id: clearBtn
+                    width: 16
+                    height: 16
+                    anchors.right: parent.right
+                    anchors.rightMargin: Theme.spacingS
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: searchField.text !== ""
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    
+                    DankIcon {
+                        anchors.centerIn: parent
+                        name: "close"
+                        size: 14
+                        color: Theme.surfaceText
+                        opacity: clearBtn.containsMouse ? 0.9 : 0.5
+                    }
+
+                    onClicked: {
+                        searchField.text = "";
+                        searchField.focus = false;
+                    }
+                }
+            }
+
             // Grid View container
             Item {
                 width: parent.width
-                height: parent.height - (root.showHeader ? 30 : 0)
+                height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0) - (searchBarContainer.height + parent.spacing)
                 clip: true
 
                 FolderListModel {
@@ -376,6 +453,7 @@ DesktopPluginComponent {
                     showDirsFirst: true
                     showHidden: root.showHidden
                     sortField: root.folderSortField
+                    nameFilters: root.searchPattern !== "" ? ["*" + root.searchPattern + "*"] : []
                 }
 
                 // Grid View of icons
