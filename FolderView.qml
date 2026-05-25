@@ -462,12 +462,12 @@ DesktopPluginComponent {
                     Rectangle {
                         id: headerSearchContainer
                         
-                        // Toggle state based on focus or active text query
-                        readonly property bool expanded: headerSearchField.activeFocus || headerSearchField.text !== ""
+                        // Explicitly expanded state matching App Launcher design
+                        property bool expanded: false
                         
                         width: expanded ? 120 : 20
                         height: 20
-                        radius: 4
+                        radius: 10
                         color: expanded 
                             ? Theme.withAlpha(Theme.surfaceText, headerSearchField.activeFocus ? 0.08 : 0.04) 
                             : "transparent"
@@ -490,6 +490,7 @@ DesktopPluginComponent {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
+                                headerSearchContainer.expanded = true;
                                 headerSearchField.forceActiveFocus();
                             }
                         }
@@ -532,7 +533,7 @@ DesktopPluginComponent {
                             onTextChanged: root.searchPattern = text.trim()
                         }
 
-                        // Clear button
+                        // Clear and Collapse button
                         MouseArea {
                             id: headerClearBtn
                             width: 12
@@ -540,7 +541,7 @@ DesktopPluginComponent {
                             anchors.right: parent.right
                             anchors.rightMargin: 4
                             anchors.verticalCenter: parent.verticalCenter
-                            visible: headerSearchContainer.expanded && headerSearchField.text !== ""
+                            visible: headerSearchContainer.expanded
                             cursorShape: Qt.PointingHandCursor
                             hoverEnabled: true
                             
@@ -554,7 +555,9 @@ DesktopPluginComponent {
 
                             onClicked: {
                                 headerSearchField.text = "";
+                                root.searchPattern = "";
                                 headerSearchField.focus = false;
+                                headerSearchContainer.expanded = false;
                             }
                         }
                     }
