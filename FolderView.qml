@@ -27,6 +27,7 @@ DesktopPluginComponent {
     readonly property real backgroundOpacity: (pluginData.backgroundOpacity ?? 80) / 100
     readonly property bool showHidden: pluginData.showHidden ?? false
     readonly property int cellSize: pluginData.cellSize ?? 84
+    readonly property double sizeScale: cellSize / 84.0
     readonly property string sortBy: pluginData.sortBy ?? "name"
     readonly property string viewMode: pluginData.viewMode ?? "grid"
     readonly property bool showHeader: pluginData.showHeader ?? true
@@ -832,7 +833,7 @@ DesktopPluginComponent {
                     delegate: Item {
                         id: listDelegateRoot
                         width: fileList.width
-                        height: 36
+                        height: Math.round(36 * root.sizeScale)
 
                         required property string filePath
                         required property string fileName
@@ -871,7 +872,7 @@ DesktopPluginComponent {
 
                                 DankIcon {
                                     name: root.getIconName(fileName, fileIsDir)
-                                    size: 20
+                                    size: Math.round(20 * root.sizeScale)
                                     color: root.getIconColor(fileName, fileIsDir)
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -884,7 +885,7 @@ DesktopPluginComponent {
                                     elide: Text.ElideRight
                                     wrapMode: Text.NoWrap
                                     maximumLineCount: 1
-                                    width: parent.width - 32
+                                    width: parent.width - Math.round(20 * root.sizeScale) - 12
                                 }
                             }
 
@@ -939,7 +940,7 @@ DesktopPluginComponent {
                     id: fileCompact
                     anchors.fill: parent
                     cellWidth: parent.width > 280 ? parent.width / 2 : parent.width
-                    cellHeight: 30
+                    cellHeight: Math.round(30 * root.sizeScale)
                     model: filteredModel
                     visible: root.viewMode === "compact"
                     boundsBehavior: Flickable.StopAtBounds
@@ -995,7 +996,7 @@ DesktopPluginComponent {
 
                                 DankIcon {
                                     name: root.getIconName(fileName, fileIsDir)
-                                    size: 16
+                                    size: Math.round(16 * root.sizeScale)
                                     color: root.getIconColor(fileName, fileIsDir)
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -1008,7 +1009,7 @@ DesktopPluginComponent {
                                     elide: Text.ElideRight
                                     wrapMode: Text.NoWrap
                                     maximumLineCount: 1
-                                    width: parent.width - 28
+                                    width: parent.width - Math.round(16 * root.sizeScale) - 12
                                 }
                             }
 
