@@ -13,6 +13,12 @@ A folder viewer widget that displays and manages files and directories on your s
 git clone https://github.com/hthienloc/dms-common ~/.config/DankMaterialShell/plugins/dms-common
 
 # 2. Install this plugin
+dms plugins install folderView
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShell/plugins/folderView
 ```
 
