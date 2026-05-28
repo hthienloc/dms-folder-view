@@ -13,18 +13,24 @@ Item {
     property double sizeScale: 1.0
     property bool hover: false
 
-    property bool isImage: {
-        const ext = fileName.split('.').pop().toLowerCase();
+    readonly property bool isImage: {
+        const parts = fileName.split('.');
+        if (parts.length < 2) return false;
+        const ext = parts.pop().toLowerCase();
         return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].indexOf(ext) !== -1;
     }
-    
-    property bool isAudio: {
-        const ext = fileName.split('.').pop().toLowerCase();
+
+    readonly property bool isAudio: {
+        const parts = fileName.split('.');
+        if (parts.length < 2) return false;
+        const ext = parts.pop().toLowerCase();
         return ["mp3", "wav", "ogg", "flac", "m4a"].indexOf(ext) !== -1;
     }
 
-    property bool isPDF: {
-        const ext = fileName.split('.').pop().toLowerCase();
+    readonly property bool isPDF: {
+        const parts = fileName.split('.');
+        if (parts.length < 2) return false;
+        const ext = parts.pop().toLowerCase();
         return ext === "pdf";
     }
 
@@ -46,7 +52,13 @@ Item {
         anchors.centerIn: parent
         width: parent.width - 4
         height: parent.height - 4
-        source: root.artSource.startsWith("file://") ? root.artSource : (root.isImage ? "file://" + root.filePath : "")
+        source: {
+            if (root.artSource.startsWith("file://")) return root.artSource;
+            if (root.isImage && root.filePath !== "") {
+                return root.filePath.startsWith("file://") ? root.filePath : "file://" + root.filePath;
+            }
+            return "";
+        }
         fillMode: Image.PreserveAspectFit
         asynchronous: true
         sourceSize.width: 128
@@ -56,7 +68,7 @@ Item {
         scale: root.hover ? 1.08 : 1.0
         Behavior on opacity { NumberAnimation { duration: 200 } }
         Behavior on scale { NumberAnimation { duration: 150 } }
-        
+
         onStatusChanged: {
             if (status === Image.Error && root.isImage) {
                 root.artSource = "failed";
@@ -66,7 +78,8 @@ Item {
 
     function getIconName(fileName, isDir) {
         if (isDir) return "folder";
-        const ext = fileName.split('.').pop().toLowerCase();
+        const parts = fileName.split('.');
+        const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
         switch (ext) {
             case "mp3": case "wav": case "ogg": case "flac": case "m4a": return "audiotrack";
             case "mp4": case "mkv": case "avi": case "mov": case "webm": return "video_library";
@@ -81,7 +94,8 @@ Item {
 
     function getIconColor(fileName, isDir) {
         if (isDir) return Theme.primary;
-        const ext = fileName.split('.').pop().toLowerCase();
+        const parts = fileName.split('.');
+        const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
         switch (ext) {
             case "mp3": case "wav": case "ogg": case "flac": case "m4a": case "mp4": case "mkv": case "avi": case "mov": case "webm": return "#7C4DFF";
             case "pdf": return "#FF1744";
@@ -110,12 +124,12 @@ Item {
 
     function requestThumbnail() {
         if (isDir || artSource !== "" || filePath === "") return;
-        
+
         const rawPath = _cleanPath(filePath);
         const cacheDir = Paths.strip(Paths.cache) + "/folderView/thumbs";
         const hash = djb2Hash(rawPath);
         const cachePath = cacheDir + "/" + hash + ".jpg";
-        
+
         if (isAudio) {
             extractAudioArt(rawPath, cacheDir, cachePath, hash);
         } else if (isPDF) {
@@ -156,6 +170,7 @@ Item {
                     if (code2 === 0) {
                         root.artSource = "file://" + cachePath;
                     } else {
+                        console.log("[FolderView] PDF extraction failed for:", fileName, "code:", code2, "error:", out2);
                         root.artSource = "failed";
                     }
                 }, 50);
