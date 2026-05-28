@@ -8,7 +8,7 @@ import "../dms-common"
 
 Popup {
     id: infoDialog
-    width: 320
+    width: 340
     height: contentColumn.implicitHeight + Theme.spacingM * 2
     padding: 0
     modal: false
@@ -20,8 +20,14 @@ Popup {
 
     property string filePath: ""
     property string fileName: ""
-    property string fileInfo: "Loading..."
     property bool isDir: false
+    
+    // Info fields
+    property string fileType: ""
+    property string filePermissions: ""
+    property string fileModified: ""
+    property string fileSize: ""
+    property string fileOwner: ""
 
     background: Rectangle {
         color: "transparent"
@@ -41,13 +47,14 @@ Popup {
             anchors.margins: Theme.spacingM
             spacing: Theme.spacingM
 
+            // Header with Icon and Name
             Row {
                 width: parent.width
                 spacing: Theme.spacingS
 
                 DankIcon {
                     name: infoDialog.isDir ? "folder" : "description"
-                    size: 24
+                    size: 28
                     color: Theme.primary
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -55,9 +62,9 @@ Popup {
                 StyledText {
                     text: infoDialog.fileName
                     font.bold: true
-                    font.pixelSize: Theme.fontSizeMedium
+                    font.pixelSize: Theme.fontSizeLarge
                     color: Theme.surfaceText
-                    width: parent.width - 32
+                    width: parent.width - 40
                     elide: Text.ElideMiddle
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -69,13 +76,94 @@ Popup {
                 color: Theme.withAlpha(Theme.outline, 0.1)
             }
 
-            StyledText {
+            // Info Grid
+            Grid {
                 width: parent.width
-                text: infoDialog.fileInfo
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.surfaceVariantText
-                wrapMode: Text.Wrap
-                lineHeight: 1.4
+                columns: 2
+                spacing: Theme.spacingS
+                verticalItemAlignment: Grid.AlignVCenter
+
+                readonly property int labelWidth: 90
+
+                // Rows helper component
+                component InfoRow: Item {
+                    width: contentColumn.width - Theme.spacingM * 2
+                    height: Math.max(label.implicitHeight, value.implicitHeight)
+                    property alias labelText: label.text
+                    property alias valueText: value.text
+
+                    StyledText {
+                        id: label
+                        text: ""
+                        width: 90
+                        font.pixelSize: Theme.fontSizeSmall
+                        font.bold: true
+                        color: Theme.surfaceVariantText
+                    }
+
+                    StyledText {
+                        id: value
+                        anchors.left: label.right
+                        anchors.right: parent.right
+                        text: ""
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.surfaceText
+                        wrapMode: Text.Wrap
+                    }
+                }
+
+                InfoRow { labelText: I18n.tr("Type:"); valueText: infoDialog.fileType }
+                InfoRow { labelText: I18n.tr("Size:"); valueText: infoDialog.fileSize }
+                InfoRow { labelText: I18n.tr("Modified:"); valueText: infoDialog.fileModified }
+                InfoRow { labelText: I18n.tr("Owner:"); valueText: infoDialog.fileOwner }
+                InfoRow { labelText: I18n.tr("Permissions:"); valueText: infoDialog.filePermissions }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.withAlpha(Theme.outline, 0.1)
+            }
+
+            // Path Section
+            Column {
+                width: parent.width
+                spacing: 4
+                
+                StyledText {
+                    text: I18n.tr("Location:")
+                    font.pixelSize: Theme.fontSizeSmall
+                    font.bold: true
+                    color: Theme.surfaceVariantText
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: pathText.implicitHeight + 16
+                    color: Theme.withAlpha(Theme.surfaceContainerHigh, 0.5)
+                    radius: 4
+                    border.color: Theme.withAlpha(Theme.outline, 0.1)
+
+                    StyledText {
+                        id: pathText
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        text: infoDialog.filePath
+                        font.pixelSize: Theme.fontSizeExtraSmall
+                        color: Theme.surfaceVariantText
+                        wrapMode: Text.WrapAnywhere
+                        font.family: "monospace"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            Quickshell.execDetached(["wl-copy", infoDialog.filePath]);
+                            ToastService.showToast(I18n.tr("Path copied to clipboard"), ToastService.levelInfo);
+                        }
+                    }
+                }
             }
 
             DankButton {
@@ -100,46 +188,59 @@ Popup {
         infoDialog.filePath = cleanPath;
         infoDialog.fileName = name;
         infoDialog.isDir = !!isDirectory;
-        infoDialog.fileInfo = "Loading...";
+        
+        // Reset fields
+        infoDialog.fileType = "..."
+        infoDialog.filePermissions = "..."
+        infoDialog.fileModified = "..."
+        infoDialog.fileSize = "..."
+        infoDialog.fileOwner = "..."
+        
         infoDialog.open();
-
         fetchInfo();
     }
 
     function fetchInfo() {
         const path = infoDialog.filePath;
-        // Get basic info with stat
-        // %F: type, %A: permissions, %y: last modified, %s: size in bytes
-        const statCmd = ["stat", "-c", "Type: %F\nPermissions: %A\nModified: %y\nSize: %s bytes", path];
+        // %F|%A|%y|%s|%U|%G
+        const statCmd = ["stat", "-c", "%F|%A|%y|%s|%U|%G", path];
         
-        Proc.runCommand("get-file-info", statCmd, (output, exitCode) => {
+        Proc.runCommand("get-file-info-structured", statCmd, (output, exitCode) => {
             if (exitCode === 0) {
-                let info = output.trim();
-                
-                if (infoDialog.isDir) {
-                    // For directories, also get human readable size with du
-                    Proc.runCommand("get-dir-size", ["du", "-sh", path], (duOutput, duExit) => {
-                        if (duExit === 0) {
-                            const size = duOutput.trim().split(/\s+/)[0];
-                            info = info.replace(/Size:.*bytes/, "Size: " + size);
-                        }
-                        infoDialog.fileInfo = info + "\nPath: " + path;
-                    });
-                } else {
-                    // For files, get human readable size with ls -lh
-                    Proc.runCommand("get-file-size", ["ls", "-lh", path], (lsOutput, lsExit) => {
-                        if (lsExit === 0) {
-                            const parts = lsOutput.trim().split(/\s+/);
-                            if (parts.length >= 5) {
-                                const size = parts[4];
-                                info = info.replace(/Size:.*bytes/, "Size: " + size);
+                const parts = output.trim().split('|');
+                if (parts.length >= 6) {
+                    infoDialog.fileType = parts[0];
+                    infoDialog.filePermissions = parts[1];
+                    infoDialog.fileModified = parts[2].split('.')[0]; // Remove nanoseconds
+                    infoDialog.fileOwner = parts[4] + ":" + parts[5];
+                    
+                    const rawSize = parts[3];
+                    
+                    if (infoDialog.isDir) {
+                        Proc.runCommand("get-dir-size", ["du", "-sh", path], (duOutput, duExit) => {
+                            if (duExit === 0) {
+                                infoDialog.fileSize = duOutput.trim().split(/\s+/)[0];
+                            } else {
+                                infoDialog.fileSize = rawSize + " bytes";
                             }
-                        }
-                        infoDialog.fileInfo = info + "\nPath: " + path;
-                    });
+                        });
+                    } else {
+                        Proc.runCommand("get-file-size", ["ls", "-lh", path], (lsOutput, lsExit) => {
+                            if (lsExit === 0) {
+                                const lsParts = lsOutput.trim().split(/\s+/);
+                                if (lsParts.length >= 5) {
+                                    infoDialog.fileSize = lsParts[4];
+                                } else {
+                                    infoDialog.fileSize = rawSize + " bytes";
+                                }
+                            } else {
+                                infoDialog.fileSize = rawSize + " bytes";
+                            }
+                        });
+                    }
                 }
             } else {
-                infoDialog.fileInfo = "Error fetching info for: " + path;
+                infoDialog.fileType = "Error fetching info";
             }
         });
     }
