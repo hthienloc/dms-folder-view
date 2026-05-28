@@ -439,6 +439,22 @@ DesktopPluginComponent {
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
 
+                        StyledText {
+                            text: {
+                                let count = folderModel.count;
+                                let selected = root.selectedFilePaths.length;
+                                let str = "(" + count + ")";
+                                if (selected > 0) {
+                                    str += " [" + selected + " selected]";
+                                }
+                                return str;
+                            }
+                            font.pixelSize: Theme.fontSizeExtraSmall
+                            color: Theme.surfaceVariantText
+                            opacity: 0.6
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
                         DankIcon {
                             name: "arrow_drop_down"
                             size: 14
