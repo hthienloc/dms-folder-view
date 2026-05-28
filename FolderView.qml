@@ -806,7 +806,7 @@ DesktopPluginComponent {
                                         launchPulse.restart();
                                         launchTimer.restart();
                                         // Open file/folder using default system application
-                                        Quickshell.execDetached(["xdg-open", root._cleanPath(delegateRoot.filePath)]);
+                                        Quickshell.execDetached(["gio", "open", root._cleanPath(delegateRoot.filePath)]);
                                         root.clearSelection();
                                     }
                                 }
@@ -952,7 +952,7 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         listDelegateRoot.isLaunching = true;
                                         listLaunchPulse.restart();
-                                        Quickshell.execDetached(["xdg-open", root._cleanPath(listDelegateRoot.filePath)]);
+                                        Quickshell.execDetached(["gio", "open", root._cleanPath(listDelegateRoot.filePath)]);
                                         listLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1100,7 +1100,7 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         compactDelegateRoot.isLaunching = true;
                                         compactLaunchPulse.restart();
-                                        Quickshell.execDetached(["xdg-open", root._cleanPath(compactDelegateRoot.filePath)]);
+                                        Quickshell.execDetached(["gio", "open", root._cleanPath(compactDelegateRoot.filePath)]);
                                         compactLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1191,7 +1191,7 @@ DesktopPluginComponent {
                             action: function() {
                                 quickMenu.close();
                                 for (let path of root.selectedFilePaths) {
-                                   Quickshell.execDetached(["xdg-open", root._cleanPath(path)]);
+                                  Quickshell.execDetached(["gio", "open", root._cleanPath(path)]);
                                 }
                                 root.clearSelection();
                             }
