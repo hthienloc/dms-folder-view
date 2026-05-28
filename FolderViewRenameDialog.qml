@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import qs.Common
 import qs.Widgets
+import qs.Services
 import "../dms-common"
 
 Popup {
