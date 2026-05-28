@@ -24,28 +24,31 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 
 ## Features
 
-- **Dynamic Folder Switcher** - Instantly swap between Desktop, Downloads, Music, Videos, Documents, or any Custom directory.
-- **Three Elegant View Modes** - Grid View (traditional), List View (detailed list), and Compact View (ultra-compact, auto-wrapping into 2 columns if the widget is wide).
-- **Direct Header Controls** - Toggle view modes and choose file sorting (Name, Date, Size, Type) directly from the widget header popups.
-- **Rich Context Menu Actions** - Open files, copy actual files to clipboard (via `wl-copy`), copy paths, rename (with smart extension exclusion), and move to trash (`gio trash`).
-- **Warm & Vibrant Design** - Premium dark mode styling, custom folder/file icons, glassmorphism backdrop, and responsive hover transitions.
+- **Directory Switching:** Switch between predefined system folders (Desktop, Downloads, Home, etc.) or any custom directory path.
+- **Multiple Layouts:** Toggle between Grid View, List View, and Compact View (configured in settings; Compact View automatically wraps into columns based on widget width).
+- **Quick Controls:** Search/filter items, sort files (by Name, Date, Size, Type), or trigger item creation directly from widget header controls.
+- **Adjustable Sizing:** Customize item icon sizes (Small, Medium, Large, Extra Large) via the plugin settings panel.
+- **File Operations:** Core file management actions including item creation (Folder/Document), renaming, copying paths, trashing, and system clipboard file copy.
+- **Multi-selection:** Multi-select items using `Ctrl` and `Shift` modifiers for bulk operations.
+- **Visual Previews:** Live image thumbnails and album art extraction for audio files.
 
 ## Usage
 
-| Action | Result |
-|--------|--------|
-| Left Click Folder Title | Open folder selection dropdown (Desktop, Downloads, Music, Videos, Documents, Trash, Home, Custom...) |
-| Left Click View Mode Icon | Open view mode selection dropdown (Grid, List, Compact) |
-| Left Click Sort Icon | Open sorting options dropdown (Name, Date, Size, Type) |
-| Left Click Zoom Icon | Open icon size selection dropdown (Small, Medium, Large, Extra Large) |
-| Left Click `+` Icon | Open creation dropdown (New Folder, New Document) |
-| Left Click File/Folder | Select/Highlight item |
-| Ctrl + Left Click File/Folder | Toggle selection of item (multi-select) |
-| Shift + Left Click File/Folder | Select range of items between last selection and clicked item |
-| Left Click Empty Space | Clear all active file/folder selections |
-| Middle Click Empty Space | Paste copied files/folders or clipboard screenshot images into active directory |
-| Double Click File/Folder | Open using system default application |
-| Middle Click File/Folder | Open context menu (Open, Copy, Copy Path, Rename, Move to Trash) for selected items |
+| Input Action | Result |
+|---|---|
+| **Left Click Folder Title** | Open directory selection dropdown (Desktop, Downloads, Trash, Home, Custom, etc.) |
+| **Left Click `+` Icon** | Open creation dropdown (New Folder, New Document) |
+| **Left Click Sort Icon** | Open sorting options dropdown (Name, Date, Size, Type) |
+| **Left Click Search Icon** | Expand/collapse search input to filter files instantly by name |
+| **Left Click File/Folder** | Select individual item |
+| **Ctrl + Left Click** | Toggle selection on multiple items |
+| **Shift + Left Click** | Select range of items |
+| **Double Click Item** | Open folder or run file with system default application |
+| **Middle Click Item** | Open context menu (Open, Copy, Copy Path, Rename, Trash) |
+| **Left Click Empty Space** | Clear current selection |
+| **Middle Click Empty Space** | Paste files, folders, or clipboard screenshots into active folder |
+
+*Note: Layout modes (Grid, List, Compact) and item icon sizing can be customized inside the plugin settings panel.*
 
 ## Requirements
 
