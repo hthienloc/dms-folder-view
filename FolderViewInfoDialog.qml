@@ -157,7 +157,7 @@ Popup {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            Quickshell.execDetached(["wl-copy", infoDialog.filePath]);
+                            Quickshell.execDetached(["dms", "cl", "copy", infoDialog.filePath]);
                             ToastService.showToast(I18n.tr("Path copied to clipboard"), ToastService.levelInfo);
                         }
                     }

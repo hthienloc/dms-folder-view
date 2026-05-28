@@ -1349,16 +1349,36 @@ DesktopPluginComponent {
                             visible: true,
                             action: function() {
                                 quickMenu.close();
+                                const paths = root.selectedFilePaths;
+                                const name = quickMenu.currentName;
+
+                                // Single image file: use DMS clipboard.copyFile so it appears
+                                // in the DMS clipboard history and can be pasted in any app.
+                                if (paths.length === 1 && root.isImage(name)) {
+                                    DMSService.sendRequest("clipboard.copyFile", { "filePath": paths[0] }, function(resp) {
+                                        if (resp.error) {
+                                            ToastService.showToast(I18n.tr("Copy failed") + ": " + resp.error, ToastService.levelError);
+                                        } else {
+                                            ToastService.showToast(I18n.tr("Image Copied") + ": " + name, ToastService.levelInfo);
+                                        }
+                                    });
+                                    return;
+                                }
+
+                                // Multi-file or non-image: use wl-copy with the gnome URI
+                                // format so the selection can be pasted into file managers.
+                                // Note: dms cl copy cannot be used here because the DMS daemon
+                                // intercepts and re-serves the entry, corrupting the content.
                                 let uris = [];
-                                for (let path of root.selectedFilePaths) {
+                                for (let path of paths) {
                                     uris.push("file://" + path);
                                 }
                                 const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
                                 Quickshell.execDetached(["bash", "-c", cmd]);
-                                
-                                let label = root.selectedFilePaths.length > 1
-                                    ? I18n.tr("Copied %1 items").arg(root.selectedFilePaths.length)
-                                    : I18n.tr("File Copied") + ": " + quickMenu.currentName;
+
+                                const label = paths.length > 1
+                                    ? I18n.tr("Copied %1 items").arg(paths.length)
+                                    : I18n.tr("File Copied") + ": " + name;
                                 ToastService.showToast(label, ToastService.levelInfo);
                             }
                         },

@@ -52,7 +52,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 
 ## Requirements
 
-- `wl-clipboard` - Required for copying actual files to the system clipboard (`wl-copy`).
+- `wl-clipboard` - Required for `wl-copy` (copying non-image files to clipboard) and `wl-paste` (reading clipboard during Paste).
 - `glib2` (or `gio`) - Required for trashing files cleanly (`gio trash`).
 
 ## License
