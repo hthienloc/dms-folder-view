@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls
 import qs.Common
+import qs.Services
 import qs.Widgets
 import qs.Modules.Plugins
 import "../dms-common"
@@ -8,8 +10,12 @@ PluginSettings {
     id: root
     pluginId: "folderView"
 
+    PluginHeader {
+        title: I18n.tr("Folder View Settings")
+    }
+
     SettingsCard {
-        SectionTitle { text: I18n.tr("Aesthetics & Size") }
+        SectionTitle { text: I18n.tr("Appearance") }
 
         SliderSetting {
             settingKey: "backgroundOpacity"
@@ -20,47 +26,11 @@ PluginSettings {
             unit: "%"
         }
 
-        SliderSetting {
-            settingKey: "cellSize"
-            label: I18n.tr("Icon Size")
-            defaultValue: 84
-            minimum: 48
-            maximum: 128
-            unit: "px"
-        }
-
         ToggleSetting {
             settingKey: "showHeader"
             label: I18n.tr("Show Folder Header")
             description: I18n.tr("Show a top header bar with folder name.")
             defaultValue: true
-        }
-    }
-
-    SettingsCard {
-        SectionTitle { text: I18n.tr("File Sorting & Display") }
-
-        SelectionSetting {
-            settingKey: "sortBy"
-            label: I18n.tr("Sort Files By")
-            options: [
-                { label: I18n.tr("Name"), value: "name" },
-                { label: I18n.tr("Modification Time"), value: "time" },
-                { label: I18n.tr("File Size"), value: "size" },
-                { label: I18n.tr("File Type"), value: "type" }
-            ]
-            defaultValue: "name"
-        }
-
-        SelectionSetting {
-            settingKey: "viewMode"
-            label: I18n.tr("View Mode")
-            options: [
-                { label: I18n.tr("Grid View"), value: "grid" },
-                { label: I18n.tr("List View"), value: "list" },
-                { label: I18n.tr("Compact View"), value: "compact" }
-            ]
-            defaultValue: "grid"
         }
 
         ToggleSetting {
@@ -68,34 +38,6 @@ PluginSettings {
             label: I18n.tr("Show Hidden Files")
             description: I18n.tr("Show files starting with a dot (e.g. .hidden).")
             defaultValue: false
-        }
-    }
-
-    SettingsCard {
-        SectionTitle { text: I18n.tr("Folder Configuration") }
-
-        SelectionSetting {
-            settingKey: "folderType"
-            label: I18n.tr("Target Folder")
-            options: [
-                { label: I18n.tr("Home"), value: "home" },
-                { label: I18n.tr("Desktop"), value: "desktop" },
-                { label: I18n.tr("Downloads"), value: "downloads" },
-                { label: I18n.tr("Music"), value: "music" },
-                { label: I18n.tr("Videos"), value: "videos" },
-                { label: I18n.tr("Documents"), value: "documents" },
-                { label: I18n.tr("Trash"), value: "trash" },
-                { label: I18n.tr("Custom Folder..."), value: "custom" }
-            ]
-            defaultValue: "desktop"
-        }
-
-        StringSetting {
-            settingKey: "customFolderPath"
-            label: I18n.tr("Custom Folder Path")
-            placeholderText: I18n.tr("e.g. /home/user/Projects or ~/Projects")
-            defaultValue: ""
-            visible: pluginData.folderType === "custom"
         }
     }
 }
