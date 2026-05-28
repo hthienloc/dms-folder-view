@@ -757,46 +757,14 @@ DesktopPluginComponent {
                                 spacing: Theme.spacingXS
 
                                 // File/Folder Icon
-                                Item {
+                                FolderViewThumbnail {
                                     width: parent.width
                                     height: parent.height - 30
-                                    
-                                    property bool showThumbnail: root.isImage(fileName) && !fileIsDir
-
-                                    DankIcon {
-                                        anchors.centerIn: parent
-                                        name: root.getIconName(fileName, fileIsDir)
-                                        size: root.cellSize > 70 ? 40 : 32
-                                        color: root.getIconColor(fileName, fileIsDir)
-                                        scale: itemHover.containsMouse ? 1.08 : 1.0
-                                        visible: !parent.showThumbnail
-                                        
-                                        Behavior on scale {
-                                            NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
-                                        }
-                                    }
-
-                                    Image {
-                                        anchors.centerIn: parent
-                                        width: parent.width - 8
-                                        height: parent.height - 8
-                                        source: "file://" + filePath
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        sourceSize.width: 128
-                                        sourceSize.height: 128
-                                        visible: parent.showThumbnail
-                                        opacity: status === Image.Ready ? 1.0 : 0.0
-                                        scale: itemHover.containsMouse ? 1.08 : 1.0
-                                        Behavior on opacity { NumberAnimation { duration: 200 } }
-                                        Behavior on scale { NumberAnimation { duration: 150 } }
-                                        
-                                        onStatusChanged: {
-                                            if (status === Image.Error) {
-                                                parent.showThumbnail = false;
-                                            }
-                                        }
-                                    }
+                                    filePath: delegateRoot.filePath
+                                    fileName: delegateRoot.fileName
+                                    isDir: delegateRoot.fileIsDir
+                                    sizeScale: root.sizeScale
+                                    hover: itemHover.containsMouse
                                 }
 
                                 // File/Folder Name
@@ -942,38 +910,15 @@ DesktopPluginComponent {
                                 spacing: Theme.spacingS
                                 anchors.verticalCenter: parent.verticalCenter
 
-                                Item {
+                                FolderViewThumbnail {
                                     width: Math.round(20 * root.sizeScale)
                                     height: width
                                     anchors.verticalCenter: parent.verticalCenter
-                                    
-                                    property bool showThumbnail: root.isImage(fileName) && !fileIsDir
-
-                                    DankIcon {
-                                        anchors.fill: parent
-                                        name: root.getIconName(fileName, fileIsDir)
-                                        size: parent.width
-                                        color: root.getIconColor(fileName, fileIsDir)
-                                        visible: !parent.showThumbnail
-                                    }
-
-                                    Image {
-                                        anchors.fill: parent
-                                        source: "file://" + filePath
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        sourceSize.width: 48
-                                        sourceSize.height: 48
-                                        visible: parent.showThumbnail
-                                        opacity: status === Image.Ready ? 1.0 : 0.0
-                                        Behavior on opacity { NumberAnimation { duration: 200 } }
-                                        
-                                        onStatusChanged: {
-                                            if (status === Image.Error) {
-                                                parent.showThumbnail = false;
-                                            }
-                                        }
-                                    }
+                                    filePath: listDelegateRoot.filePath
+                                    fileName: listDelegateRoot.fileName
+                                    isDir: listDelegateRoot.fileIsDir
+                                    sizeScale: root.sizeScale
+                                    hover: listItemHover.containsMouse
                                 }
 
                                 StyledText {
@@ -1117,38 +1062,15 @@ DesktopPluginComponent {
                                 spacing: Theme.spacingS
                                 anchors.verticalCenter: parent.verticalCenter
 
-                                Item {
+                                FolderViewThumbnail {
                                     width: Math.round(16 * root.sizeScale)
                                     height: width
                                     anchors.verticalCenter: parent.verticalCenter
-                                    
-                                    property bool showThumbnail: root.isImage(fileName) && !fileIsDir
-
-                                    DankIcon {
-                                        anchors.fill: parent
-                                        name: root.getIconName(fileName, fileIsDir)
-                                        size: parent.width
-                                        color: root.getIconColor(fileName, fileIsDir)
-                                        visible: !parent.showThumbnail
-                                    }
-
-                                    Image {
-                                        anchors.fill: parent
-                                        source: "file://" + filePath
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                        sourceSize.width: 32
-                                        sourceSize.height: 32
-                                        visible: parent.showThumbnail
-                                        opacity: status === Image.Ready ? 1.0 : 0.0
-                                        Behavior on opacity { NumberAnimation { duration: 200 } }
-                                        
-                                        onStatusChanged: {
-                                            if (status === Image.Error) {
-                                                parent.showThumbnail = false;
-                                            }
-                                        }
-                                    }
+                                    filePath: compactDelegateRoot.filePath
+                                    fileName: compactDelegateRoot.fileName
+                                    isDir: compactDelegateRoot.fileIsDir
+                                    sizeScale: root.sizeScale
+                                    hover: compactItemHover.containsMouse
                                 }
 
                                 StyledText {
