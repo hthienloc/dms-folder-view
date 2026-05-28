@@ -774,8 +774,8 @@ DesktopPluginComponent {
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
-                                    elide: Text.ElideRight
-                                    maximumLineCount: 2
+                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 2
                                     wrapMode: Text.WrapAnywhere
                                     opacity: itemHover.containsMouse ? 1.0 : 0.85
                                 }
@@ -865,7 +865,7 @@ DesktopPluginComponent {
                     delegate: Item {
                         id: listDelegateRoot
                         width: fileList.width
-                        height: Math.round(36 * root.sizeScale)
+                        height: (isSelected && root.selectedFilePaths.length === 1) ? Math.max(Math.round(36 * root.sizeScale), listRow.implicitHeight + 8) : Math.round(36 * root.sizeScale)
 
                         required property string filePath
                         required property string fileName
@@ -904,16 +904,20 @@ DesktopPluginComponent {
                             border.width: isLaunching ? 1 : (isSelected ? 1 : 0)
 
                             Row {
+                                id: listRow
                                 anchors.fill: parent
                                 anchors.leftMargin: Theme.spacingS
                                 anchors.rightMargin: Theme.spacingS
                                 spacing: Theme.spacingS
-                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
+                                anchors.topMargin: (isSelected && root.selectedFilePaths.length === 1) ? 4 : 0
 
                                 FolderViewThumbnail {
                                     width: Math.round(20 * root.sizeScale)
                                     height: width
-                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                    anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
                                     filePath: listDelegateRoot.filePath
                                     fileName: listDelegateRoot.fileName
                                     isDir: listDelegateRoot.fileIsDir
@@ -925,10 +929,11 @@ DesktopPluginComponent {
                                     text: fileName
                                     font.pixelSize: Theme.fontSizeSmall
                                     color: Theme.surfaceText
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    elide: Text.ElideRight
-                                    wrapMode: Text.NoWrap
-                                    maximumLineCount: 1
+                                    anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                    anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
+                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
+                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 1
                                     width: parent.width - Math.round(20 * root.sizeScale) - 12
                                 }
                             }
@@ -1017,7 +1022,7 @@ DesktopPluginComponent {
                     delegate: Item {
                         id: compactDelegateRoot
                         width: fileCompact.cellWidth
-                        height: fileCompact.cellHeight
+                        height: (isSelected && root.selectedFilePaths.length === 1) ? Math.max(Math.round(30 * root.sizeScale), compactRow.implicitHeight + 8) : Math.round(30 * root.sizeScale)
 
                         required property string filePath
                         required property string fileName
@@ -1056,16 +1061,20 @@ DesktopPluginComponent {
                             border.width: isLaunching ? 1 : (isSelected ? 1 : 0)
 
                             Row {
+                                id: compactRow
                                 anchors.fill: parent
                                 anchors.leftMargin: Theme.spacingS
                                 anchors.rightMargin: Theme.spacingS
                                 spacing: Theme.spacingS
-                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
+                                anchors.topMargin: (isSelected && root.selectedFilePaths.length === 1) ? 4 : 0
 
                                 FolderViewThumbnail {
                                     width: Math.round(16 * root.sizeScale)
                                     height: width
-                                    anchors.verticalCenter: parent.verticalCenter
+                                    anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                    anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
                                     filePath: compactDelegateRoot.filePath
                                     fileName: compactDelegateRoot.fileName
                                     isDir: compactDelegateRoot.fileIsDir
@@ -1077,10 +1086,11 @@ DesktopPluginComponent {
                                     text: fileName
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     color: Theme.surfaceText
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    elide: Text.ElideRight
-                                    wrapMode: Text.NoWrap
-                                    maximumLineCount: 1
+                                    anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
+                                    anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
+                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
+                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 1
                                     width: parent.width - Math.round(16 * root.sizeScale) - 12
                                 }
                             }
