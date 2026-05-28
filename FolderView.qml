@@ -189,6 +189,45 @@ DesktopPluginComponent {
         Quickshell.execDetached([scriptPath, pathStr]);
     }
 
+    function copySelectedFiles() {
+        if (root.selectedFilePaths.length === 0) return;
+        let uris = [];
+        for (let path of root.selectedFilePaths) {
+            uris.push("file://" + path);
+        }
+        const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
+        Quickshell.execDetached(["bash", "-c", cmd]);
+        
+        let label = root.selectedFilePaths.length > 1
+            ? I18n.tr("Copied %1 items").arg(root.selectedFilePaths.length)
+            : I18n.tr("File Copied") + ": " + root.selectedFilePaths[0].split('/').pop();
+        ToastService.showToast(label, ToastService.levelInfo);
+    }
+
+    function trashSelectedFiles() {
+        if (root.selectedFilePaths.length === 0) return;
+        const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
+        Quickshell.execDetached(["gio", "trash"].concat(cleanPaths));
+        root.clearSelection();
+    }
+
+    function selectAllFiles() {
+        let allPaths = [];
+        for (let i = 0; i < filteredModel.count; i++) {
+            allPaths.push(filteredModel.get(i).filePath);
+        }
+        selectedFilePaths = allPaths;
+        selectionClearTimer.restart();
+    }
+
+    function openSelectedFiles() {
+        if (root.selectedFilePaths.length === 0) return;
+        for (let path of root.selectedFilePaths) {
+            Quickshell.execDetached(["gio", "open", root._cleanPath(path)]);
+        }
+        root.clearSelection();
+    }
+
     onSelectedFilePathsChanged: {
         if (selectedFilePaths.length > 0) {
             selectionClearTimer.restart();
@@ -392,6 +431,49 @@ DesktopPluginComponent {
         color: Theme.withAlpha(Theme.surfaceContainer, root.backgroundOpacity)
         border.color: root.editMode ? Theme.primary : Theme.withAlpha(Theme.outline, 0.08)
         border.width: root.editMode ? 2 : 1
+        
+        focus: true
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_F2) {
+                if (root.selectedFilePaths.length === 1) {
+                    const path = root.selectedFilePaths[0];
+                    const name = path.split('/').pop();
+                    // We need to know if it's a dir. 
+                    // Since we don't have it easily here without searching the model,
+                    // we can look it up in filteredModel.
+                    let isDir = false;
+                    for (let i = 0; i < filteredModel.count; i++) {
+                        if (filteredModel.get(i).filePath === path) {
+                            isDir = filteredModel.get(i).fileIsDir;
+                            break;
+                        }
+                    }
+                    renameDialog.showFor(path, name, isDir);
+                    event.accepted = true;
+                }
+            } else if (event.key === Qt.Key_Delete) {
+                root.trashSelectedFiles();
+                event.accepted = true;
+            } else if (event.matches(StandardKey.Copy)) {
+                root.copySelectedFiles();
+                event.accepted = true;
+            } else if (event.matches(StandardKey.Paste)) {
+                root.pasteFromClipboard();
+                event.accepted = true;
+            } else if (event.matches(StandardKey.SelectAll)) {
+                root.selectAllFiles();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                root.openSelectedFiles();
+                event.accepted = true;
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            z: -2
+            onPressed: parent.forceActiveFocus()
+        }
 
         Column {
             anchors.fill: parent
@@ -1190,10 +1272,7 @@ DesktopPluginComponent {
                             visible: true,
                             action: function() {
                                 quickMenu.close();
-                                for (let path of root.selectedFilePaths) {
-                                  Quickshell.execDetached(["gio", "open", root._cleanPath(path)]);
-                                }
-                                root.clearSelection();
+                                root.openSelectedFiles();
                             }
                         },
                         {
@@ -1202,17 +1281,7 @@ DesktopPluginComponent {
                             visible: true,
                             action: function() {
                                 quickMenu.close();
-                                let uris = [];
-                                for (let path of root.selectedFilePaths) {
-                                    uris.push("file://" + path);
-                                }
-                                const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
-                                Quickshell.execDetached(["bash", "-c", cmd]);
-                                
-                                let label = root.selectedFilePaths.length > 1
-                                    ? I18n.tr("Copied %1 items").arg(root.selectedFilePaths.length)
-                                    : I18n.tr("File Copied") + ": " + quickMenu.currentName;
-                                ToastService.showToast(label, ToastService.levelInfo);
+                                root.copySelectedFiles();
                             }
                         },
                         {
@@ -1256,9 +1325,7 @@ DesktopPluginComponent {
                             visible: true,
                             action: function() {
                                 quickMenu.close();
-                                const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
-                                Quickshell.execDetached(["gio", "trash"].concat(cleanPaths));
-                                root.clearSelection();
+                                root.trashSelectedFiles();
                             }
                         }
                     ]
