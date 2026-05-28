@@ -123,17 +123,29 @@ Item {
     }
 
     function requestThumbnail() {
-        if (isDir || artSource !== "" || filePath === "") return;
+        if (isDir || artSource !== "" || filePath === "" || artSource === "failed") return;
+        
+        // Use a timer to stagger requests and ensure properties are settled
+        loadTimer.restart();
+    }
 
-        const rawPath = _cleanPath(filePath);
-        const cacheDir = Paths.strip(Paths.cache) + "/folderView/thumbs";
-        const hash = djb2Hash(rawPath);
-        const cachePath = cacheDir + "/" + hash + ".jpg";
-
-        if (isAudio) {
-            extractAudioArt(rawPath, cacheDir, cachePath, hash);
-        } else if (isPDF) {
-            extractPDFThumb(rawPath, cacheDir, cachePath, hash);
+    Timer {
+        id: loadTimer
+        interval: 50 + Math.random() * 500 // Random delay to spread load
+        repeat: false
+        onTriggered: {
+            if (isDir || artSource !== "" || filePath === "") return;
+            
+            const rawPath = _cleanPath(filePath);
+            const cacheDir = Paths.strip(Paths.cache) + "/folderView/thumbs";
+            const hash = djb2Hash(rawPath);
+            const cachePath = cacheDir + "/" + hash + ".jpg";
+            
+            if (isAudio) {
+                extractAudioArt(rawPath, cacheDir, cachePath, hash);
+            } else if (isPDF) {
+                extractPDFThumb(rawPath, cacheDir, cachePath, hash);
+            }
         }
     }
 
@@ -151,7 +163,7 @@ Item {
                     } else {
                         root.artSource = "failed";
                     }
-                }, 50);
+                }, 100);
             }
         });
     }
@@ -163,17 +175,15 @@ Item {
             if (code === 0) {
                 root.artSource = "file://" + cachePath;
             } else {
-                // pdftoppm adds .jpg automatically if we give it a prefix
                 const prefix = cacheDir + "/" + hash;
                 const cmd = ["pdftoppm", "-jpeg", "-singlefile", "-scale-to", "128", rawPath, prefix];
                 Proc.runCommand("extract-pdf-" + hash, cmd, (out2, code2) => {
                     if (code2 === 0) {
                         root.artSource = "file://" + cachePath;
                     } else {
-                        console.log("[FolderView] PDF extraction failed for:", fileName, "code:", code2, "error:", out2);
                         root.artSource = "failed";
                     }
-                }, 50);
+                }, 100);
             }
         });
     }
