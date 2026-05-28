@@ -775,8 +775,8 @@ DesktopPluginComponent {
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
                                     elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
-                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 2
-                                    wrapMode: Text.WrapAnywhere
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 1
+                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
                                     opacity: itemHover.containsMouse ? 1.0 : 0.85
                                 }
                             }
