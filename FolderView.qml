@@ -863,6 +863,14 @@ DesktopPluginComponent {
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
+                        SequentialAnimation {
+                            id: listLaunchPulse
+                            running: false
+                            NumberAnimation { target: listDelegateRoot; property: "scale"; to: 0.98; duration: 100; easing.type: Easing.OutQuad }
+                            NumberAnimation { target: listDelegateRoot; property: "scale"; to: 1.02; duration: 150; easing.type: Easing.OutBack }
+                            NumberAnimation { target: listDelegateRoot; property: "scale"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
+                        }
+
                         Timer {
                             id: listLaunchTimer
                             interval: 800
@@ -945,6 +953,7 @@ DesktopPluginComponent {
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
                                         listDelegateRoot.isLaunching = true;
+                                        listLaunchPulse.restart();
                                         Quickshell.execDetached(["xdg-open", listDelegateRoot.filePath]);
                                         listLaunchTimer.restart();
                                         root.clearSelection();
@@ -1001,6 +1010,14 @@ DesktopPluginComponent {
 
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
+
+                        SequentialAnimation {
+                            id: compactLaunchPulse
+                            running: false
+                            NumberAnimation { target: compactDelegateRoot; property: "scale"; to: 0.98; duration: 100; easing.type: Easing.OutQuad }
+                            NumberAnimation { target: compactDelegateRoot; property: "scale"; to: 1.02; duration: 150; easing.type: Easing.OutBack }
+                            NumberAnimation { target: compactDelegateRoot; property: "scale"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
+                        }
 
                         Timer {
                             id: compactLaunchTimer
@@ -1084,6 +1101,7 @@ DesktopPluginComponent {
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
                                         compactDelegateRoot.isLaunching = true;
+                                        compactLaunchPulse.restart();
                                         Quickshell.execDetached(["xdg-open", compactDelegateRoot.filePath]);
                                         compactLaunchTimer.restart();
                                         root.clearSelection();
