@@ -181,6 +181,32 @@ DesktopPluginComponent {
         return path;
     }
 
+    function smartTruncate(name, full) {
+        if (full || name.length <= 12) return name;
+        
+        let limit = 26; // Goal for 2 lines
+        if (root.viewMode === "list") limit = 60;
+        if (root.viewMode === "compact") limit = 32;
+
+        if (name.length <= limit) return name;
+
+        const lastDot = name.lastIndexOf('.');
+        if (lastDot <= 0 || name.length - lastDot > 6) {
+            return name.substring(0, limit - 3) + "...";
+        }
+
+        const ext = name.substring(lastDot);
+        const base = name.substring(0, lastDot);
+        const avail = limit - ext.length - 3;
+        
+        if (avail <= 4) return name.substring(0, limit - 3) + "...";
+
+        const keepStart = Math.ceil(avail * 0.7);
+        const keepEnd = avail - keepStart;
+
+        return base.substring(0, keepStart) + "..." + (keepEnd > 0 ? base.substring(base.length - keepEnd) : "") + ext;
+    }
+
     function pasteFromClipboard() {
         let scriptPath = root._cleanPath(Qt.resolvedUrl("paste.py"));
         let pathStr = root._cleanPath(root.targetFolderUrl);
@@ -770,13 +796,13 @@ DesktopPluginComponent {
                                 // File/Folder Name
                                 StyledText {
                                     width: parent.width
-                                    text: fileName
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
-                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
-                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 1
-                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
+                                    elide: Text.ElideNone
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 2
+                                    wrapMode: Text.WrapAnywhere
                                     opacity: itemHover.containsMouse ? 1.0 : 0.85
                                 }
                             }
@@ -926,14 +952,14 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
-                                    text: fileName
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
                                     anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
-                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
-                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
-                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 1
+                                    elide: Text.ElideNone
+                                    wrapMode: Text.WrapAnywhere
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 2
                                     width: parent.width - Math.round(20 * root.sizeScale) - 12
                                 }
                             }
@@ -1083,14 +1109,14 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
-                                    text: fileName
+                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1)
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: (isSelected && root.selectedFilePaths.length === 1) ? undefined : parent.verticalCenter
                                     anchors.top: (isSelected && root.selectedFilePaths.length === 1) ? parent.top : undefined
-                                    elide: (isSelected && root.selectedFilePaths.length === 1) ? Text.ElideNone : Text.ElideMiddle
-                                    wrapMode: (isSelected && root.selectedFilePaths.length === 1) ? Text.WrapAnywhere : Text.NoWrap
-                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 1
+                                    elide: Text.ElideNone
+                                    wrapMode: Text.WrapAnywhere
+                                    maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 5 : 2
                                     width: parent.width - Math.round(16 * root.sizeScale) - 12
                                 }
                             }
