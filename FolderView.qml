@@ -865,7 +865,7 @@ DesktopPluginComponent {
                             // Pin indicator overlay
                             DankIcon {
                                 name: "push_pin"
-                                size: 12
+                                size: 16
                                 color: Theme.primary
                                 anchors.top: parent.top
                                 anchors.topMargin: Theme.spacingXS + 2
@@ -1030,7 +1030,7 @@ DesktopPluginComponent {
                             // Pin indicator
                             DankIcon {
                                 name: "push_pin"
-                                size: 10
+                                size: 14
                                 color: Theme.primary
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.right: parent.right
@@ -1194,7 +1194,7 @@ DesktopPluginComponent {
                             // Pin indicator
                             DankIcon {
                                 name: "push_pin"
-                                size: 10
+                                size: 12
                                 color: Theme.primary
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.right: parent.right
