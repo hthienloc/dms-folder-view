@@ -25,27 +25,22 @@ Popup {
     property var allApps: []
 
     function fetchApps() {
-        if (createAppDialog.allApps.length > 0) {
-            updateAppModel();
-            return;
-        }
-        
-        let scriptPath = Qt.resolvedUrl("scripts/scan_apps.py").toString().replace("file://", "");
-        if (scriptPath.startsWith("localhost/")) {
-            scriptPath = scriptPath.substring(10);
-        }
-        
-        Proc.runCommand("dmsFolderView.scanApps", ["python3", scriptPath], (out, code) => {
-            if (code === 0 && out) {
-                try {
-                    const data = JSON.parse(out);
-                    createAppDialog.allApps = data;
-                    updateAppModel();
-                } catch(e) {
-                    console.log("Error parsing apps: " + e);
-                }
+        // Fetch all apps directly from Quickshell's DesktopEntries singleton
+        const allEntries = DesktopEntries.applications.values;
+        let apps = [];
+        for (let i = 0; i < allEntries.length; i++) {
+            const app = allEntries[i];
+            if (app && !app.noDisplay) {
+                apps.push({
+                    name: app.name || "",
+                    exec: app.execString || (app.command ? app.command.join(" ") : ""),
+                    icon: app.icon || ""
+                });
             }
-        });
+        }
+        apps.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        createAppDialog.allApps = apps;
+        updateAppModel();
     }
 
     onOpened: {
@@ -69,12 +64,11 @@ Popup {
         const query = searchField.text.trim().toLowerCase();
         for (let i = 0; i < allApps.length; i++) {
             const app = allApps[i];
-            if (query === "" || app.name.toLowerCase().indexOf(query) !== -1 || app.exec.toLowerCase().indexOf(query) !== -1) {
+            if (query === "" || (app.name || "").toLowerCase().indexOf(query) !== -1 || (app.exec || "").toLowerCase().indexOf(query) !== -1) {
                 appModel.append({
                     appName: app.name,
                     appExec: app.exec,
-                    appIcon: app.icon,
-                    appFilepath: app.filepath
+                    appIcon: app.icon
                 });
             }
         }
@@ -287,7 +281,7 @@ Popup {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: {
-                                        createAppDialog.copySystemApp(model.appFilepath, model.appName);
+                                        createAppDialog.createSystemAppShortcut(model.appName, model.appExec, model.appIcon);
                                     }
                                 }
                             }
@@ -361,14 +355,18 @@ Popup {
         return pathStr;
     }
 
-    function copySystemApp(sourceFilepath, appName) {
+    function createSystemAppShortcut(appName, appExec, appIcon) {
         let pathStr = getTargetFolder();
         let safeName = appName.replace(/[^a-zA-Z0-9_-]/g, "_");
         const targetPath = pathStr + "/" + safeName + ".desktop";
+        const content = "[Desktop Entry]\nType=Application\nName=" + appName + "\nExec=" + appExec + "\nIcon=" + appIcon + "\nTerminal=false\n";
         try {
-            Quickshell.execDetached(["cp", sourceFilepath, targetPath]);
+            const escapedContent = content.replace(/'/g, "'\\''");
+            const escapedPath = targetPath.replace(/'/g, "'\\''");
+            const shellCmd = "printf '%s' '" + escapedContent + "' > '" + escapedPath + "'";
+            Quickshell.execDetached(["sh", "-c", shellCmd]);
         } catch (e) {
-            ToastService.showToast("Copy error: " + e.message, ToastService.levelError);
+            ToastService.showToast("Create error: " + e.message, ToastService.levelError);
         }
         createAppDialog.close();
     }

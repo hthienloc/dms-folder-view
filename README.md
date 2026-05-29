@@ -46,7 +46,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 
 ## Requirements
 
-- `python3` - Required for scanning system installed applications and handling advanced clipboard paste operations.
+- `python3` - Required only for handling advanced clipboard paste operations (e.g., pasting images/screenshots from clipboard).
 - `wl-clipboard` - Required for `wl-copy` (copying non-image files to clipboard) and `wl-paste` (reading clipboard during Paste).
 - `glib2` (or `gio`) - Required for trashing files cleanly (`gio trash`).
 
