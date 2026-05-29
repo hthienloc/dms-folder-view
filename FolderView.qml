@@ -1418,14 +1418,6 @@ DesktopPluginComponent {
                             }
                         },
                         {
-                            actionName: "pin",
-                            visible: true,
-                            action: function() {
-                                quickMenu.close();
-                                root.togglePin(quickMenu.currentPath);
-                            }
-                        },
-                        {
                             text: I18n.tr("Copy"),
                             icon: "content_copy",
                             visible: true,
@@ -1495,6 +1487,14 @@ DesktopPluginComponent {
                             action: function() {
                                 quickMenu.close();
                                 infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
+                            }
+                        },
+                        {
+                            actionName: "pin",
+                            visible: true,
+                            action: function() {
+                                quickMenu.close();
+                                root.togglePin(quickMenu.currentPath);
                             }
                         },
                         { isSeparator: true },
