@@ -26,6 +26,7 @@ DesktopPluginComponent {
 
     // Settings config
     readonly property real backgroundOpacity: (pluginData.backgroundOpacity ?? 80) / 100
+    readonly property real borderOpacity: (pluginData.borderOpacity ?? 8) / 100
     readonly property bool showHidden: pluginData.showHidden ?? false
     readonly property int cellSize: pluginData.cellSize ?? 84
     readonly property double sizeScale: cellSize / 84.0
@@ -537,7 +538,7 @@ DesktopPluginComponent {
         radius: Theme.cornerRadius
         clip: true
         color: Theme.withAlpha(Theme.surfaceContainer, root.backgroundOpacity)
-        border.color: root.editMode ? Theme.primary : Theme.withAlpha(Theme.outline, 0.08)
+        border.color: root.editMode ? Theme.primary : Theme.withAlpha(Theme.outline, root.borderOpacity)
         border.width: root.editMode ? 2 : 1
 
         Column {
