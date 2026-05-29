@@ -394,7 +394,11 @@ Popup {
         const content = "[Desktop Entry]\nType=Application\nName=" + name + "\nExec=" + execVal + "\nIcon=" + iconVal + "\nTerminal=false\n";
 
         try {
-            Quickshell.execDetached(["python3", "-c", "import sys; open(sys.argv[1], 'w').write(sys.argv[2])", targetPath, content]);
+            // Write to file cleanly using POSIX printf, removing dependency on python3 for writing files
+            const escapedContent = content.replace(/'/g, "'\\''");
+            const escapedPath = targetPath.replace(/'/g, "'\\''");
+            const shellCmd = "printf '%s' '" + escapedContent + "' > '" + escapedPath + "'";
+            Quickshell.execDetached(["sh", "-c", shellCmd]);
         } catch (e) {
             ToastService.showToast("Create error: " + e.message, ToastService.levelError);
         }

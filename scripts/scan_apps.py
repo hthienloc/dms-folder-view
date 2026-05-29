@@ -3,7 +3,17 @@ import os
 import json
 import re
 
-DESKTOP_DIRS = [
+# Build DESKTOP_DIRS dynamically using XDG_DATA_DIRS to support NixOS and other custom environments
+DESKTOP_DIRS = []
+raw_dirs = os.environ.get("XDG_DATA_DIRS", "").split(":")
+for d in raw_dirs:
+    if d.strip():
+        apps_dir = os.path.join(d.strip(), "applications")
+        if apps_dir not in DESKTOP_DIRS:
+            DESKTOP_DIRS.append(apps_dir)
+
+# Add fallback / standard directories
+fallbacks = [
     "/usr/share/applications",
     "/usr/local/share/applications",
     os.path.expanduser("~/.local/share/applications"),
@@ -11,6 +21,9 @@ DESKTOP_DIRS = [
     os.path.expanduser("~/.local/share/flatpak/exports/share/applications"),
     "/var/lib/snapd/desktop/applications"
 ]
+for d in fallbacks:
+    if d not in DESKTOP_DIRS:
+        DESKTOP_DIRS.append(d)
 
 CATEGORY_MAPPING = {
     "Development": "Development",
