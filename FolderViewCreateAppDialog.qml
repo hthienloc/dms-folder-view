@@ -13,7 +13,8 @@ Popup {
     width: 380
     height: 520
     padding: 0
-    modal: false
+    modal: true
+    dim: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
@@ -94,41 +95,113 @@ Popup {
             anchors.margins: Theme.spacingM
             spacing: Theme.spacingS
 
-            Row {
+            // Dialog Header
+            Item {
                 width: parent.width
-                spacing: Theme.spacingS
+                height: 24
                 
-                DankButton {
-                    text: I18n.tr("System Apps")
-                    backgroundColor: modeStack.currentIndex === 0 ? Theme.primary : "transparent"
-                    textColor: modeStack.currentIndex === 0 ? Theme.primaryText : Theme.surfaceText
-                    onClicked: {
-                        modeStack.currentIndex = 0;
-                        searchField.forceActiveFocus();
-                    }
+                StyledText {
+                    text: I18n.tr("New Application")
+                    font.bold: true
+                    font.pixelSize: Theme.fontSizeMedium
+                    color: Theme.surfaceText
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
                 }
-                
-                DankButton {
-                    text: I18n.tr("Custom App")
-                    backgroundColor: modeStack.currentIndex === 1 ? Theme.primary : "transparent"
-                    textColor: modeStack.currentIndex === 1 ? Theme.primaryText : Theme.surfaceText
-                    onClicked: {
-                        modeStack.currentIndex = 1;
-                        nameField.forceActiveFocus();
+
+                // Close Dialog Button
+                MouseArea {
+                    width: 24
+                    height: 24
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: createAppDialog.close()
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    DankIcon {
+                        anchors.centerIn: parent
+                        name: "close"
+                        size: 16
+                        color: Theme.surfaceText
+                        opacity: parent.containsMouse ? 1.0 : 0.6
                     }
                 }
             }
 
+            // Tabs Segmented Control
             Rectangle {
                 width: parent.width
-                height: 1
-                color: Theme.withAlpha(Theme.outline, 0.15)
+                height: 32
+                radius: 16
+                color: Theme.withAlpha(Theme.surfaceText, 0.05)
+                border.color: Theme.withAlpha(Theme.outline, 0.1)
+                border.width: 1
+
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 2
+
+                    // Tab 1: System Apps
+                    MouseArea {
+                        id: tabSysBtn
+                        width: parent.width / 2
+                        height: parent.height
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            modeStack.currentIndex = 0;
+                            searchField.forceActiveFocus();
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 14
+                            color: modeStack.currentIndex === 0 ? Theme.primary : "transparent"
+
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: I18n.tr("System Apps")
+                                font.bold: modeStack.currentIndex === 0
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: modeStack.currentIndex === 0 ? Theme.onPrimary : Theme.surfaceText
+                                opacity: modeStack.currentIndex === 0 ? 1.0 : (tabSysBtn.containsMouse ? 0.9 : 0.6)
+                            }
+                        }
+                    }
+
+                    // Tab 2: Custom App
+                    MouseArea {
+                        id: tabCustBtn
+                        width: parent.width / 2
+                        height: parent.height
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            modeStack.currentIndex = 1;
+                            nameField.forceActiveFocus();
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 14
+                            color: modeStack.currentIndex === 1 ? Theme.primary : "transparent"
+
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: I18n.tr("Custom App")
+                                font.bold: modeStack.currentIndex === 1
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: modeStack.currentIndex === 1 ? Theme.onPrimary : Theme.surfaceText
+                                opacity: modeStack.currentIndex === 1 ? 1.0 : (tabCustBtn.containsMouse ? 0.9 : 0.6)
+                            }
+                        }
+                    }
+                }
             }
 
             StackLayout {
                 id: modeStack
                 width: parent.width
-                height: parent.height - 48
+                height: parent.height - 24 - 32 - (Theme.spacingS * 3)
 
                 // Page 0: System Apps
                 Column {
