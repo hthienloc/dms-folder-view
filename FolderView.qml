@@ -300,10 +300,41 @@ DesktopPluginComponent {
                 const nameStr = String(fName);
                 if (pattern === "" || nameStr.toLowerCase().indexOf(pattern) !== -1) {
                     let pathStr = String(fPath);
+                    let isDesktop = nameStr.endsWith(".desktop") && !fIsDir;
+                    let appName = "";
+                    let appIcon = "";
+                    let appExec = "";
+
+                    if (isDesktop) {
+                        try {
+                            var xhr = new XMLHttpRequest();
+                            let fileUrl = pathStr.startsWith("file://") ? pathStr : "file://" + pathStr;
+                            xhr.open("GET", fileUrl, false);
+                            xhr.send(null);
+                            if (xhr.status === 200 || xhr.status === 0) {
+                                var lines = xhr.responseText.split('\n');
+                                for (var j = 0; j < lines.length; j++) {
+                                    var line = lines[j].trim();
+                                    if (line.startsWith("Name=") && !appName) {
+                                        appName = line.substring(5).trim();
+                                    } else if (line.startsWith("Icon=") && !appIcon) {
+                                        appIcon = line.substring(5).trim();
+                                    } else if (line.startsWith("Exec=") && !appExec) {
+                                        appExec = line.substring(5).trim();
+                                    }
+                                }
+                            }
+                        } catch(e) {}
+                    }
+
                     let item = {
                         filePath: pathStr,
                         fileName: nameStr,
-                        fileIsDir: !!fIsDir
+                        fileIsDir: !!fIsDir,
+                        isDesktop: isDesktop,
+                        appName: appName,
+                        appIcon: appIcon,
+                        appExec: appExec
                     };
                     
                     let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
@@ -803,6 +834,11 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
+                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
+                        property string appName: model.appName !== undefined ? model.appName : ""
+                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
+                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -845,6 +881,7 @@ DesktopPluginComponent {
                                     filePath: delegateRoot.filePath
                                     fileName: delegateRoot.fileName
                                     isDir: delegateRoot.fileIsDir
+                                    appIcon: delegateRoot.appIcon
                                     sizeScale: root.sizeScale
                                     hover: itemHover.containsMouse
                                 }
@@ -853,7 +890,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     width: parent.width
                                     font.pixelSize: Theme.fontSizeSmall - 1
-                                    text: root.smartTruncate(fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
+                                    text: root.smartTruncate(delegateRoot.isDesktop && delegateRoot.appName ? delegateRoot.appName : delegateRoot.fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
                                     elide: Text.ElideNone
@@ -914,7 +951,12 @@ DesktopPluginComponent {
                                         launchPulse.restart();
                                         launchTimer.restart();
                                         // Open file/folder using default system application
-                                        Quickshell.execDetached(["gio", "open", root._cleanPath(delegateRoot.filePath)]);
+                                        if (delegateRoot.isDesktop && delegateRoot.appExec) {
+                                            let cmd = delegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
+                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        } else {
+                                            Quickshell.execDetached(["gio", "open", root._cleanPath(delegateRoot.filePath)]);
+                                        }
                                         root.clearSelection();
                                     }
                                 }
@@ -966,6 +1008,11 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
+                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
+                        property string appName: model.appName !== undefined ? model.appName : ""
+                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
+                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -1012,6 +1059,7 @@ DesktopPluginComponent {
                                     filePath: listDelegateRoot.filePath
                                     fileName: listDelegateRoot.fileName
                                     isDir: listDelegateRoot.fileIsDir
+                                    appIcon: listDelegateRoot.appIcon
                                     sizeScale: root.sizeScale
                                     hover: listItemHover.containsMouse
                                 }
@@ -1019,7 +1067,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     font.pixelSize: Theme.fontSizeSmall
                                     width: parent.width - Math.round(20 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 32 : 12)
-                                    text: root.smartTruncate(fileName, false, width, font.pixelSize)
+                                    text: root.smartTruncate(listDelegateRoot.isDesktop && listDelegateRoot.appName ? listDelegateRoot.appName : listDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideNone
@@ -1076,7 +1124,13 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         listDelegateRoot.isLaunching = true;
                                         listLaunchPulse.restart();
-                                        Quickshell.execDetached(["gio", "open", root._cleanPath(listDelegateRoot.filePath)]);
+                                        // Open file/folder using default system application
+                                        if (listDelegateRoot.isDesktop && listDelegateRoot.appExec) {
+                                            let cmd = listDelegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
+                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        } else {
+                                            Quickshell.execDetached(["gio", "open", root._cleanPath(listDelegateRoot.filePath)]);
+                                        }
                                         listLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1130,6 +1184,11 @@ DesktopPluginComponent {
                         required property bool fileIsDir
                         required property int index
 
+                        property bool isDesktop: model.isDesktop !== undefined ? model.isDesktop : false
+                        property string appName: model.appName !== undefined ? model.appName : ""
+                        property string appIcon: model.appIcon !== undefined ? model.appIcon : ""
+                        property string appExec: model.appExec !== undefined ? model.appExec : ""
+
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -1176,6 +1235,7 @@ DesktopPluginComponent {
                                     filePath: compactDelegateRoot.filePath
                                     fileName: compactDelegateRoot.fileName
                                     isDir: compactDelegateRoot.fileIsDir
+                                    appIcon: compactDelegateRoot.appIcon
                                     sizeScale: root.sizeScale
                                     hover: compactItemHover.containsMouse
                                 }
@@ -1183,7 +1243,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     width: parent.width - Math.round(16 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 28 : 12)
-                                    text: root.smartTruncate(fileName, false, width, font.pixelSize)
+                                    text: root.smartTruncate(compactDelegateRoot.isDesktop && compactDelegateRoot.appName ? compactDelegateRoot.appName : compactDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideNone
@@ -1240,7 +1300,13 @@ DesktopPluginComponent {
                                     if (mouse.button === Qt.LeftButton) {
                                         compactDelegateRoot.isLaunching = true;
                                         compactLaunchPulse.restart();
-                                        Quickshell.execDetached(["gio", "open", root._cleanPath(compactDelegateRoot.filePath)]);
+                                        // Open file/folder using default system application
+                                        if (compactDelegateRoot.isDesktop && compactDelegateRoot.appExec) {
+                                            let cmd = compactDelegateRoot.appExec.replace(/%[fFuUiIcDkKvV]/g, "").trim();
+                                            Quickshell.execDetached(["sh", "-c", cmd]);
+                                        } else {
+                                            Quickshell.execDetached(["gio", "open", root._cleanPath(compactDelegateRoot.filePath)]);
+                                        }
                                         compactLaunchTimer.restart();
                                         root.clearSelection();
                                     }
@@ -1516,6 +1582,13 @@ DesktopPluginComponent {
         targetFolderUrl: root.targetFolderUrl
     }
 
+    // Create App Dialog
+    FolderViewCreateAppDialog {
+        id: createAppDialog
+        parent: root
+        targetFolderUrl: root.targetFolderUrl
+    }
+
     // Folder Switcher Dropdown Popup
     Popup {
         id: folderDropdown
@@ -1644,7 +1717,8 @@ DesktopPluginComponent {
                 Repeater {
                     model: [
                         { label: I18n.tr("New Folder"), value: "folder", icon: "create_new_folder" },
-                        { label: I18n.tr("New Document"), value: "file", icon: "note_add" }
+                        { label: I18n.tr("New Document"), value: "file", icon: "note_add" },
+                        { label: I18n.tr("New App"), value: "app", icon: "add_to_home_screen" }
                     ]
 
                     delegate: Rectangle {
@@ -1685,7 +1759,11 @@ DesktopPluginComponent {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 createDropdown.close();
-                                createDialog.showFor(modelData.value === "folder");
+                                if (modelData.value === "app") {
+                                    createAppDialog.show();
+                                } else {
+                                    createDialog.showFor(modelData.value === "folder");
+                                }
                             }
                         }
                     }

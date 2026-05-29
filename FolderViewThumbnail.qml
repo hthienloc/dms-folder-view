@@ -12,6 +12,7 @@ Item {
     property bool isDir: false
     property double sizeScale: 1.0
     property bool hover: false
+    property string appIcon: ""
 
     readonly property bool isImage: {
         const parts = fileName.split('.');
@@ -35,7 +36,7 @@ Item {
     }
 
     property string artSource: ""
-    property bool showThumbnail: (isImage || isAudio || isPDF) && !isDir && artSource !== "failed"
+    property bool showThumbnail: (isImage || isAudio || isPDF || root.appIcon !== "") && !isDir && artSource !== "failed"
 
     DankIcon {
         anchors.centerIn: parent
@@ -53,6 +54,7 @@ Item {
         width: parent.width - 4
         height: parent.height - 4
         source: {
+            if (root.appIcon !== "") return Quickshell.iconPath(root.appIcon);
             if (root.artSource.startsWith("file://")) return root.artSource;
             if (root.isImage && root.filePath !== "") {
                 return root.filePath.startsWith("file://") ? root.filePath : "file://" + root.filePath;
