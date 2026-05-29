@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Common
 import qs.Widgets
 import qs.Services
@@ -8,8 +10,8 @@ import "./dms-common"
 
 Popup {
     id: createAppDialog
-    width: 280
-    height: contentColumn.implicitHeight + Theme.spacingM * 2
+    width: 380
+    height: 520
     padding: 0
     modal: false
     focus: true
@@ -19,14 +21,52 @@ Popup {
     y: parent ? Math.round((parent.height - height) / 2) : 0
 
     property string targetFolderUrl: ""
+    property var allApps: []
+
+    Process {
+        id: appScanner
+        command: ["python3", Qt.resolvedUrl("scripts/scan_apps.py").toString().replace("file://", "")]
+        onExited: {
+            try {
+                const data = JSON.parse(stdout.readAll());
+                createAppDialog.allApps = data;
+                updateAppModel();
+            } catch(e) {
+                console.log("Error parsing apps: " + e);
+            }
+        }
+    }
 
     onOpened: {
         Qt.callLater(() => {
+            searchField.text = "";
             nameField.text = "";
             execField.text = "";
             iconField.text = "";
-            nameField.forceActiveFocus();
+            if (createAppDialog.allApps.length === 0) {
+                appScanner.running = true;
+            } else {
+                updateAppModel();
+            }
+            modeStack.currentIndex = 0;
+            searchField.forceActiveFocus();
         });
+    }
+
+    function updateAppModel() {
+        appModel.clear();
+        const query = searchField.text.trim().toLowerCase();
+        for (let i = 0; i < allApps.length; i++) {
+            const app = allApps[i];
+            if (query === "" || app.name.toLowerCase().indexOf(query) !== -1 || app.exec.toLowerCase().indexOf(query) !== -1) {
+                appModel.append({
+                    appName: app.name,
+                    appExec: app.exec,
+                    appIcon: app.icon,
+                    appFilepath: app.filepath
+                });
+            }
+        }
     }
 
     background: Rectangle {
@@ -40,59 +80,183 @@ Popup {
         border.width: 1
 
         Column {
-            id: contentColumn
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
+            anchors.fill: parent
             anchors.margins: Theme.spacingM
             spacing: Theme.spacingS
-
-            StyledText {
-                text: I18n.tr("New App")
-                font.bold: true
-                font.pixelSize: Theme.fontSizeMedium
-                color: Theme.surfaceText
-            }
-
-            DankTextField {
-                id: nameField
-                width: parent.width
-                placeholderText: I18n.tr("App name...")
-                focus: true
-                onAccepted: execField.forceActiveFocus()
-            }
-
-            DankTextField {
-                id: execField
-                width: parent.width
-                placeholderText: I18n.tr("Command...")
-                onAccepted: iconField.forceActiveFocus()
-            }
-
-            DankTextField {
-                id: iconField
-                width: parent.width
-                placeholderText: I18n.tr("Icon (optional)...")
-                onAccepted: createAppDialog.performCreate()
-            }
 
             Row {
                 width: parent.width
                 spacing: Theme.spacingS
-                layoutDirection: Qt.RightToLeft
-
+                
                 DankButton {
-                    text: I18n.tr("Create")
-                    backgroundColor: Theme.primary
-                    textColor: Theme.primaryText
-                    onClicked: createAppDialog.performCreate()
+                    text: I18n.tr("System Apps")
+                    backgroundColor: modeStack.currentIndex === 0 ? Theme.primary : "transparent"
+                    textColor: modeStack.currentIndex === 0 ? Theme.primaryText : Theme.surfaceText
+                    onClicked: {
+                        modeStack.currentIndex = 0;
+                        searchField.forceActiveFocus();
+                    }
+                }
+                
+                DankButton {
+                    text: I18n.tr("Custom App")
+                    backgroundColor: modeStack.currentIndex === 1 ? Theme.primary : "transparent"
+                    textColor: modeStack.currentIndex === 1 ? Theme.primaryText : Theme.surfaceText
+                    onClicked: {
+                        modeStack.currentIndex = 1;
+                        nameField.forceActiveFocus();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: Theme.withAlpha(Theme.outline, 0.15)
+            }
+
+            StackLayout {
+                id: modeStack
+                width: parent.width
+                height: parent.height - 48
+
+                // Page 0: System Apps
+                Column {
+                    spacing: Theme.spacingS
+                    
+                    DankTextField {
+                        id: searchField
+                        width: parent.width
+                        placeholderText: I18n.tr("Search apps...")
+                        onTextChanged: updateAppModel()
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: parent.height - searchField.height - Theme.spacingS
+                        color: Theme.surfaceContainerLow
+                        radius: Theme.cornerRadius - 2
+                        border.color: Theme.withAlpha(Theme.outline, 0.1)
+                        border.width: 1
+                        clip: true
+
+                        ListModel { id: appModel }
+
+                        ListView {
+                            id: appListView
+                            anchors.fill: parent
+                            model: appModel
+                            boundsBehavior: Flickable.StopAtBounds
+                            ScrollBar.vertical: ScrollBar {}
+                            delegate: Rectangle {
+                                width: parent.width
+                                height: 56
+                                color: appMouse.containsMouse ? Theme.withAlpha(Theme.primary, 0.1) : "transparent"
+                                
+                                Row {
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.spacingS
+                                    spacing: Theme.spacingS
+                                    
+                                    Image {
+                                        id: appImg
+                                        source: model.appIcon ? Quickshell.iconPath(model.appIcon) : ""
+                                        width: 36
+                                        height: 36
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        visible: model.appIcon !== ""
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                    }
+                                    
+                                    DankIcon {
+                                        name: "widgets"
+                                        size: 36
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        visible: !appImg.visible || appImg.status === Image.Error
+                                        color: Theme.primary
+                                    }
+
+                                    Column {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: parent.width - 50
+                                        spacing: 2
+                                        StyledText {
+                                            text: model.appName
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            font.bold: true
+                                            color: Theme.surfaceText
+                                        }
+                                        StyledText {
+                                            text: model.appExec
+                                            font.pixelSize: Theme.fontSizeTiny
+                                            color: Theme.surfaceVariantText
+                                            elide: Text.ElideRight
+                                            width: parent.width
+                                        }
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: appMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        createAppDialog.copySystemApp(model.appFilepath, model.appName);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
-                DankButton {
-                    text: I18n.tr("Cancel")
-                    backgroundColor: Theme.surfaceContainerHigh
-                    textColor: Theme.surfaceText
-                    onClicked: createAppDialog.close()
+                // Page 1: Custom App
+                Column {
+                    spacing: Theme.spacingS
+
+                    DankTextField {
+                        id: nameField
+                        width: parent.width
+                        placeholderText: I18n.tr("App name...")
+                        onAccepted: execField.forceActiveFocus()
+                    }
+
+                    DankTextField {
+                        id: execField
+                        width: parent.width
+                        placeholderText: I18n.tr("Command...")
+                        onAccepted: iconField.forceActiveFocus()
+                    }
+
+                    DankTextField {
+                        id: iconField
+                        width: parent.width
+                        placeholderText: I18n.tr("Icon (optional)...")
+                        onAccepted: createAppDialog.performCreate()
+                    }
+
+                    Item { width: 1; height: Theme.spacingM }
+
+                    Row {
+                        width: parent.width
+                        spacing: Theme.spacingS
+                        layoutDirection: Qt.RightToLeft
+
+                        DankButton {
+                            text: I18n.tr("Create")
+                            backgroundColor: Theme.primary
+                            textColor: Theme.primaryText
+                            onClicked: createAppDialog.performCreate()
+                        }
+
+                        DankButton {
+                            text: I18n.tr("Cancel")
+                            backgroundColor: Theme.surfaceContainerHigh
+                            textColor: Theme.surfaceText
+                            onClicked: createAppDialog.close()
+                        }
+                    }
                 }
             }
         }
@@ -100,6 +264,29 @@ Popup {
 
     function show() {
         createAppDialog.open();
+    }
+
+    function getTargetFolder() {
+        let pathStr = String(createAppDialog.targetFolderUrl);
+        if (pathStr.startsWith("file://")) {
+            pathStr = pathStr.substring(7);
+        }
+        if (pathStr.startsWith("localhost/")) {
+            pathStr = pathStr.substring(9);
+        }
+        return pathStr;
+    }
+
+    function copySystemApp(sourceFilepath, appName) {
+        let pathStr = getTargetFolder();
+        let safeName = appName.replace(/[^a-zA-Z0-9_-]/g, "_");
+        const targetPath = pathStr + "/" + safeName + ".desktop";
+        try {
+            Quickshell.execDetached(["cp", sourceFilepath, targetPath]);
+        } catch (e) {
+            ToastService.showToast("Copy error: " + e.message, ToastService.levelError);
+        }
+        createAppDialog.close();
     }
 
     function performCreate() {
@@ -116,14 +303,7 @@ Popup {
             iconVal = "application-x-executable";
         }
 
-        let pathStr = String(createAppDialog.targetFolderUrl);
-        if (pathStr.startsWith("file://")) {
-            pathStr = pathStr.substring(7);
-        }
-        if (pathStr.startsWith("localhost/")) {
-            pathStr = pathStr.substring(9);
-        }
-
+        let pathStr = getTargetFolder();
         const fileName = name.endsWith(".desktop") ? name : name + ".desktop";
         const targetPath = pathStr + "/" + fileName;
 
