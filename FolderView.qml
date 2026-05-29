@@ -903,7 +903,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     width: parent.width
                                     font.pixelSize: Theme.fontSizeSmall - 1
-                                    text: root.smartTruncate(delegateRoot.isDesktop && delegateRoot.appName ? delegateRoot.appName : delegateRoot.fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
+                                    text: root.smartTruncate(delegateRoot.isDesktop ? (delegateRoot.appName ? delegateRoot.appName : delegateRoot.fileName.slice(0, -8)) : delegateRoot.fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     horizontalAlignment: Text.AlignHCenter
                                     elide: Text.ElideNone
@@ -1079,7 +1079,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     font.pixelSize: Theme.fontSizeSmall
                                     width: parent.width - Math.round(20 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 32 : 12)
-                                    text: root.smartTruncate(listDelegateRoot.isDesktop && listDelegateRoot.appName ? listDelegateRoot.appName : listDelegateRoot.fileName, false, width, font.pixelSize)
+                                    text: root.smartTruncate(listDelegateRoot.isDesktop ? (listDelegateRoot.appName ? listDelegateRoot.appName : listDelegateRoot.fileName.slice(0, -8)) : listDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideNone
@@ -1254,7 +1254,7 @@ DesktopPluginComponent {
                                 StyledText {
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     width: parent.width - Math.round(16 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 28 : 12)
-                                    text: root.smartTruncate(compactDelegateRoot.isDesktop && compactDelegateRoot.appName ? compactDelegateRoot.appName : compactDelegateRoot.fileName, false, width, font.pixelSize)
+                                    text: root.smartTruncate(compactDelegateRoot.isDesktop ? (compactDelegateRoot.appName ? compactDelegateRoot.appName : compactDelegateRoot.fileName.slice(0, -8)) : compactDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
                                     anchors.verticalCenter: parent.verticalCenter
                                     elide: Text.ElideNone
