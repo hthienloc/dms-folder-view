@@ -144,7 +144,7 @@ Popup {
                     Rectangle {
                         width: parent.width
                         height: parent.height - searchField.height - Theme.spacingS
-                        color: Theme.surfaceContainerLow
+                        color: "transparent"
                         radius: Theme.cornerRadius - 2
                         border.color: Theme.withAlpha(Theme.outline, 0.1)
                         border.width: 1
@@ -157,7 +157,6 @@ Popup {
                             anchors.fill: parent
                             model: appModel
                             boundsBehavior: Flickable.StopAtBounds
-                            ScrollBar.vertical: ScrollBar {}
                             delegate: Rectangle {
                                 width: parent.width
                                 height: 56
