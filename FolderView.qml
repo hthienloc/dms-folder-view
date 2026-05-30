@@ -566,7 +566,7 @@ DesktopPluginComponent {
                         width: folderRow.implicitWidth
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: folderDropdown.open()
+                        onClicked: folderDropdown.visible ? folderDropdown.close() : folderDropdown.open()
 
                         Row {
                             id: folderRow
@@ -613,6 +613,10 @@ DesktopPluginComponent {
                         visible: folderModel.count > 0
                         
                         onClicked: mouse => {
+                            if (quickMenu.visible) {
+                                quickMenu.close();
+                                return;
+                            }
                             if (root.selectedFilePaths.length === 0) return;
 
                             const globalPos = mapToItem(root, mouse.x, mouse.y);
