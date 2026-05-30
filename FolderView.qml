@@ -553,63 +553,110 @@ DesktopPluginComponent {
                 height: 24
                 visible: root.showHeader
 
-                // Left: Folder Selector
-                MouseArea {
-                    id: folderSelectorBtn
+                // Left: Folder Selector + File Status
+                Row {
                     anchors.left: parent.left
                     height: parent.height
-                    width: folderRow.implicitWidth
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: folderDropdown.open()
+                    spacing: Theme.spacingS
 
-                    Row {
-                        id: folderRow
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: Theme.spacingXS
+                    // Part 1: Folder Selection
+                    MouseArea {
+                        id: folderSelectorBtn
+                        height: parent.height
+                        width: folderRow.implicitWidth
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: folderDropdown.open()
 
-                        DankIcon {
-                            name: "folder_open"
-                            size: 18
-                            color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
-                            opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
+                        Row {
+                            id: folderRow
                             anchors.verticalCenter: parent.verticalCenter
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
+                            spacing: Theme.spacingXS
 
-                        StyledText {
-                            text: root.folderDisplayName
-                            font.pixelSize: Theme.fontSizeSmall
-                            font.bold: true
-                            color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
-                            opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
-                            anchors.verticalCenter: parent.verticalCenter
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
-
-                        StyledText {
-                            text: {
-                                let count = folderModel.count;
-                                let selected = root.selectedFilePaths.length;
-                                let str = "(" + count + ")";
-                                if (selected > 0) {
-                                    str += " [" + selected + " selected]";
-                                }
-                                return str;
+                            DankIcon {
+                                name: "folder_open"
+                                size: 18
+                                color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                                opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
+                                anchors.verticalCenter: parent.verticalCenter
+                                Behavior on color { ColorAnimation { duration: 150 } }
                             }
-                            font.pixelSize: Theme.fontSizeExtraSmall
-                            color: Theme.surfaceVariantText
-                            opacity: 0.6
-                            anchors.verticalCenter: parent.verticalCenter
+
+                            StyledText {
+                                text: root.folderDisplayName
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.bold: true
+                                color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                                opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
+                                anchors.verticalCenter: parent.verticalCenter
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            DankIcon {
+                                name: "arrow_drop_down"
+                                size: 14
+                                color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
+                                opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.6
+                                anchors.verticalCenter: parent.verticalCenter
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+                        }
+                    }
+
+                    // Part 2: File Status (Click for Context Menu)
+                    MouseArea {
+                        id: fileStatusBtn
+                        height: parent.height
+                        width: fileStatusRow.implicitWidth
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        visible: folderModel.count > 0
+                        
+                        onClicked: mouse => {
+                            if (root.selectedFilePaths.length === 0) return;
+
+                            const globalPos = mapToItem(root, mouse.x, mouse.y);
+                            quickMenu.parent = root;
+                            quickMenu.x = Math.max(0, Math.min(root.width - quickMenu.width, globalPos.x));
+                            quickMenu.y = Math.max(0, Math.min(root.height - quickMenu.height, globalPos.y));
+                            
+                            if (root.selectedFilePaths.length === 1) {
+                                const path = root.selectedFilePaths[0];
+                                quickMenu.currentPath = path;
+                                quickMenu.currentName = path.split('/').pop();
+                                
+                                for (let i = 0; i < filteredModel.count; i++) {
+                                    if (filteredModel.get(i).filePath === path) {
+                                        quickMenu.currentIsDir = filteredModel.get(i).fileIsDir;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            quickMenu.open();
                         }
 
-                        DankIcon {
-                            name: "arrow_drop_down"
-                            size: 14
-                            color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
-                            opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.6
+                        Row {
+                            id: fileStatusRow
                             anchors.verticalCenter: parent.verticalCenter
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            spacing: 4
+
+                            StyledText {
+                                text: {
+                                    let count = folderModel.count;
+                                    let selected = root.selectedFilePaths.length;
+                                    let str = "(" + count + ")";
+                                    if (selected > 0) {
+                                        str += " [" + selected + " " + I18n.tr("selected") + "]";
+                                    }
+                                    return str;
+                                }
+                                font.pixelSize: Theme.fontSizeExtraSmall
+                                color: fileStatusBtn.containsMouse ? Theme.primary : Theme.surfaceVariantText
+                                opacity: fileStatusBtn.containsMouse ? 1.0 : 0.6
+                                anchors.verticalCenter: parent.verticalCenter
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
                         }
                     }
                 }
