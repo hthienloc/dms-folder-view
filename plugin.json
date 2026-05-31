@@ -2,7 +2,7 @@
   "id": "folderView",
   "name": "Folder View",
   "description": "Displays and opens files/folders located in a selected directory.",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "author": "Loc Huynh",
   "type": "desktop",
   "capabilities": ["desktop-widget"],
