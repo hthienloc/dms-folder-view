@@ -655,7 +655,7 @@ DesktopPluginComponent {
                                     }
                                     return str;
                                 }
-                                font.pixelSize: Theme.fontSizeExtraSmall
+                                font.pixelSize: Theme.fontSizeSmall
                                 color: fileStatusBtn.containsMouse ? Theme.primary : Theme.surfaceVariantText
                                 opacity: fileStatusBtn.containsMouse ? 1.0 : 0.6
                                 anchors.verticalCenter: parent.verticalCenter

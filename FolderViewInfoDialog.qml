@@ -147,7 +147,7 @@ Popup {
                         anchors.fill: parent
                         anchors.margins: 8
                         text: infoDialog.filePath
-                        font.pixelSize: Theme.fontSizeExtraSmall
+                        font.pixelSize: Theme.fontSizeSmall
                         color: Theme.surfaceVariantText
                         wrapMode: Text.WrapAnywhere
                         font.family: "monospace"
