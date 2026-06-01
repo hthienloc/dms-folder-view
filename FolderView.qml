@@ -579,7 +579,6 @@ DesktopPluginComponent {
                                 color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
                                 opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
                                 anchors.verticalCenter: parent.verticalCenter
-                                Behavior on color { ColorAnimation { duration: 150 } }
                             }
 
                             StyledText {
@@ -589,7 +588,6 @@ DesktopPluginComponent {
                                 color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
                                 opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.8
                                 anchors.verticalCenter: parent.verticalCenter
-                                Behavior on color { ColorAnimation { duration: 150 } }
                             }
 
                             DankIcon {
@@ -598,7 +596,6 @@ DesktopPluginComponent {
                                 color: folderSelectorBtn.containsMouse ? Theme.primary : Theme.surfaceText
                                 opacity: folderSelectorBtn.containsMouse ? 1.0 : 0.6
                                 anchors.verticalCenter: parent.verticalCenter
-                                Behavior on color { ColorAnimation { duration: 150 } }
                             }
                         }
                     }
@@ -659,7 +656,6 @@ DesktopPluginComponent {
                                 color: fileStatusBtn.containsMouse ? Theme.primary : Theme.surfaceVariantText
                                 opacity: fileStatusBtn.containsMouse ? 1.0 : 0.6
                                 anchors.verticalCenter: parent.verticalCenter
-                                Behavior on color { ColorAnimation { duration: 150 } }
                             }
                         }
                     }
@@ -689,7 +685,6 @@ DesktopPluginComponent {
                             size: 16
                             color: backToTopBtn.containsMouse ? Theme.primary : Theme.surfaceText
                             opacity: backToTopBtn.containsMouse ? 1.0 : 0.7
-                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
 
@@ -812,7 +807,6 @@ DesktopPluginComponent {
                             size: 16
                             color: createBtn.containsMouse ? Theme.primary : Theme.surfaceText
                             opacity: createBtn.containsMouse ? 1.0 : 0.7
-                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
 
@@ -838,7 +832,6 @@ DesktopPluginComponent {
                             size: 16
                             color: sortByBtn.containsMouse ? Theme.primary : Theme.surfaceText
                             opacity: sortByBtn.containsMouse ? 1.0 : 0.7
-                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
                 }
