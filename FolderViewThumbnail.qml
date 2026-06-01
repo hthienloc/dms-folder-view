@@ -155,11 +155,13 @@ Item {
         Quickshell.execDetached(["mkdir", "-p", cacheDir]);
         
         Proc.runCommand("check-art-" + hash, ["test", "-f", cachePath], (out, code) => {
+            if (!root) return;
             if (code === 0) {
                 root.artSource = "file://" + cachePath;
             } else {
                 const cmd = ["ffmpeg", "-y", "-i", rawPath, "-an", "-frames:v", "1", "-f", "image2", cachePath];
                 Proc.runCommand("extract-art-" + hash, cmd, (out2, code2) => {
+                    if (!root) return;
                     if (code2 === 0) {
                         root.artSource = "file://" + cachePath;
                     } else {
@@ -174,12 +176,14 @@ Item {
         Quickshell.execDetached(["mkdir", "-p", cacheDir]);
         
         Proc.runCommand("check-pdf-" + hash, ["test", "-f", cachePath], (out, code) => {
+            if (!root) return;
             if (code === 0) {
                 root.artSource = "file://" + cachePath;
             } else {
                 const prefix = cacheDir + "/" + hash;
                 const cmd = ["pdftoppm", "-jpeg", "-singlefile", "-scale-to", "128", rawPath, prefix];
                 Proc.runCommand("extract-pdf-" + hash, cmd, (out2, code2) => {
+                    if (!root) return;
                     if (code2 === 0) {
                         root.artSource = "file://" + cachePath;
                     } else {
