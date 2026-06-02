@@ -67,6 +67,9 @@ DesktopPluginComponent {
             case "music":
                 path = home + "/Music";
                 break;
+            case "pictures":
+                path = home + "/Pictures";
+                break;
             case "videos":
                 path = home + "/Videos";
                 break;
@@ -98,6 +101,7 @@ DesktopPluginComponent {
             case "desktop": return I18n.tr("Desktop");
             case "downloads": return I18n.tr("Downloads");
             case "music": return I18n.tr("Music");
+            case "pictures": return I18n.tr("Pictures");
             case "videos": return I18n.tr("Videos");
             case "documents": return I18n.tr("Documents");
             case "trash": return I18n.tr("Trash");
@@ -1751,6 +1755,7 @@ DesktopPluginComponent {
                         { label: I18n.tr("Desktop"), value: "desktop", icon: "desktop_mac" },
                         { label: I18n.tr("Downloads"), value: "downloads", icon: "download" },
                         { label: I18n.tr("Music"), value: "music", icon: "music_note" },
+                        { label: I18n.tr("Pictures"), value: "pictures", icon: "image" },
                         { label: I18n.tr("Videos"), value: "videos", icon: "movie" },
                         { label: I18n.tr("Documents"), value: "documents", icon: "description" },
                         { label: I18n.tr("Trash"), value: "trash", icon: "delete" },
