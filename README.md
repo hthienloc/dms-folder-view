@@ -38,11 +38,15 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 | **Ctrl + Left Click** | Toggle selection on multiple items |
 | **Shift + Left Click** | Select range of items |
 | **Double Click Item** | Open folder or run file with system default application |
-| **Middle Click Item** | Open context menu (Open, Copy, Copy Path, Rename, Trash) |
+| **Middle Click Item** | Open context menu (Open, Float Image, Copy, Copy Path, Rename, Trash) |
 | **Left Click Empty Space** | Clear current selection |
 | **Middle Click Empty Space** | Paste files, folders, or clipboard screenshots into active folder |
 
 *Note: Layout modes (Grid, List, Compact) and item icon sizing can be customized inside the plugin settings panel.*
+
+### Pin-to-Desktop (Float Image)
+
+To pin your images as borderless, floating desktop widgets (always-on-top picture-in-picture windows), you can use the companion [dms-floaty](https://github.com/hthienloc/dms-floaty) plugin. Folder View integrates seamlessly with `dms-floaty` out-of-the-box, allowing you to float any image file directly from the middle-click context menu.
 
 ## Requirements
 
