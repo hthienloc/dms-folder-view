@@ -299,71 +299,94 @@ DesktopPluginComponent {
                 const fName = folderModel.get(i, "fileName");
                 const fPath = folderModel.get(i, "filePath");
                 const fIsDir = folderModel.get(i, "fileIsDir");
+                const fModified = folderModel.get(i, "fileModified");
                 
                 if (fName === undefined || fName === null || fPath === undefined || fPath === null) {
                     continue;
                 }
                 
                 const nameStr = String(fName);
-                if (pattern === "" || nameStr.toLowerCase().indexOf(pattern) !== -1) {
-                    let pathStr = String(fPath);
-                    let isDesktop = nameStr.endsWith(".desktop") && !fIsDir;
-                    let item = {
-                        filePath: pathStr,
-                        fileName: nameStr,
-                        fileIsDir: !!fIsDir,
-                        isDesktop: isDesktop,
-                        appName: "",
-                        appIcon: "",
-                        appExec: ""
-                    };
-                    
-                    if (isDesktop) {
-                        let safePath = root._cleanPath(pathStr);
-                        Proc.runCommand("parseDesktop-" + Math.random(), ["cat", safePath], (out, code) => {
-                            if (code === 0 && out) {
-                                let aName = "";
-                                let aIcon = "";
-                                let aExec = "";
-                                let lines = out.split('\n');
-                                for (let j = 0; j < lines.length; j++) {
-                                    let l = lines[j].trim();
-                                    if (l.startsWith("Name=") && !aName) aName = l.substring(5).trim();
-                                    else if (l.startsWith("Icon=") && !aIcon) aIcon = l.substring(5).trim();
-                                    else if (l.startsWith("Exec=") && !aExec) aExec = l.substring(5).trim();
-                                }
-                                
-                                // Find the item index since model might have changed
-                                let targetIdx = -1;
-                                for (let k = 0; k < filteredModel.count; k++) {
-                                    if (filteredModel.get(k).filePath === pathStr) {
-                                        targetIdx = k;
-                                        break;
-                                    }
-                                }
-                                
-                                if (targetIdx !== -1) {
-                                    filteredModel.setProperty(targetIdx, "appName", aName);
-                                    filteredModel.setProperty(targetIdx, "appIcon", aIcon);
-                                    filteredModel.setProperty(targetIdx, "appExec", aExec);
+                
+                // 1. Search Pattern filter check
+                if (pattern !== "" && nameStr.toLowerCase().indexOf(pattern) === -1) {
+                    continue;
+                }
+                
+                // 2. File Type filter check
+                if (root.filterType !== "all") {
+                    if (root.filterType === "folders" && !fIsDir) continue;
+                    if (root.filterType === "files" && fIsDir) continue;
+                    if (root.filterType === "images" && (fIsDir || !root.isImage(nameStr))) continue;
+                    if (root.filterType === "documents" && (fIsDir || !root.isDocument(nameStr))) continue;
+                    if (root.filterType === "audio_video" && (fIsDir || !root.isAudioVideo(nameStr))) continue;
+                }
+                
+                // 3. Time filter check
+                if (root.filterTime !== "all" && fModified !== undefined && fModified !== null) {
+                    const elapsed = new Date() - fModified;
+                    if (root.filterTime === "today" && elapsed > 24 * 60 * 60 * 1000) continue;
+                    if (root.filterTime === "week" && elapsed > 7 * 24 * 60 * 60 * 1000) continue;
+                    if (root.filterTime === "month" && elapsed > 30 * 24 * 60 * 60 * 1000) continue;
+                    if (root.filterTime === "year" && elapsed > 365 * 24 * 60 * 60 * 1000) continue;
+                }
+
+                let pathStr = String(fPath);
+                let isDesktop = nameStr.endsWith(".desktop") && !fIsDir;
+                let item = {
+                    filePath: pathStr,
+                    fileName: nameStr,
+                    fileIsDir: !!fIsDir,
+                    isDesktop: isDesktop,
+                    appName: "",
+                    appIcon: "",
+                    appExec: ""
+                };
+                
+                if (isDesktop) {
+                    let safePath = root._cleanPath(pathStr);
+                    Proc.runCommand("parseDesktop-" + Math.random(), ["cat", safePath], (out, code) => {
+                        if (code === 0 && out) {
+                            let aName = "";
+                            let aIcon = "";
+                            let aExec = "";
+                            let lines = out.split('\n');
+                            for (let j = 0; j < lines.length; j++) {
+                                let l = lines[j].trim();
+                                if (l.startsWith("Name=") && !aName) aName = l.substring(5).trim();
+                                else if (l.startsWith("Icon=") && !aIcon) aIcon = l.substring(5).trim();
+                                else if (l.startsWith("Exec=") && !aExec) aExec = l.substring(5).trim();
+                            }
+                            
+                            // Find the item index since model might have changed
+                            let targetIdx = -1;
+                            for (let k = 0; k < filteredModel.count; k++) {
+                                if (filteredModel.get(k).filePath === pathStr) {
+                                    targetIdx = k;
+                                    break;
                                 }
                             }
-                        });
-                    }
-                    
-                    let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
-                    if (isPinned) {
-                        if (fIsDir) {
-                            pinnedDirs.push(item);
-                        } else {
-                            pinnedFiles.push(item);
+                            
+                            if (targetIdx !== -1) {
+                                filteredModel.setProperty(targetIdx, "appName", aName);
+                                filteredModel.setProperty(targetIdx, "appIcon", aIcon);
+                                filteredModel.setProperty(targetIdx, "appExec", aExec);
+                            }
                         }
+                    });
+                }
+                
+                let isPinned = root.pinnedPaths.indexOf(pathStr) !== -1;
+                if (isPinned) {
+                    if (fIsDir) {
+                        pinnedDirs.push(item);
                     } else {
-                        if (fIsDir) {
-                            unpinnedDirs.push(item);
-                        } else {
-                            unpinnedFiles.push(item);
-                        }
+                        pinnedFiles.push(item);
+                    }
+                } else {
+                    if (fIsDir) {
+                        unpinnedDirs.push(item);
+                    } else {
+                        unpinnedFiles.push(item);
                     }
                 }
             } catch (e) {
@@ -378,6 +401,22 @@ DesktopPluginComponent {
     }
 
     onSearchPatternChanged: updateFilteredModel()
+ 
+    // Basic Filtering Properties
+    property string filterType: "all"
+    property string filterTime: "all"
+    onFilterTypeChanged: updateFilteredModel()
+    onFilterTimeChanged: updateFilteredModel()
+ 
+    function isDocument(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        return ["doc", "docx", "pdf", "txt", "odt", "xls", "xlsx", "ppt", "pptx", "md", "csv"].indexOf(ext) !== -1;
+    }
+ 
+    function isAudioVideo(fileName) {
+        const ext = fileName.split('.').pop().toLowerCase();
+        return ["mp3", "wav", "ogg", "flac", "m4a", "mp4", "mkv", "avi", "mov", "webm", "flv"].indexOf(ext) !== -1;
+    }
 
     function scrollToTop() {
         if (viewMode === "grid" && typeof fileGrid !== "undefined" && fileGrid) {
@@ -818,7 +857,7 @@ DesktopPluginComponent {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: sortByDropdown.open()
-
+ 
                         DankIcon {
                             anchors.centerIn: parent
                             name: {
@@ -832,6 +871,24 @@ DesktopPluginComponent {
                             size: 16
                             color: sortByBtn.containsMouse ? Theme.primary : Theme.surfaceText
                             opacity: sortByBtn.containsMouse ? 1.0 : 0.7
+                        }
+                    }
+ 
+                    // Filter Button
+                    MouseArea {
+                        id: filterBtn
+                        width: 20
+                        height: 20
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: filterDropdown.open()
+ 
+                        DankIcon {
+                            anchors.centerIn: parent
+                            name: "filter_list"
+                            size: 16
+                            color: (root.filterType !== "all" || root.filterTime !== "all") ? Theme.primary : (filterBtn.containsMouse ? Theme.primary : Theme.surfaceText)
+                            opacity: (root.filterType !== "all" || root.filterTime !== "all" || filterBtn.containsMouse) ? 1.0 : 0.7
                         }
                     }
                 }
@@ -1463,6 +1520,16 @@ DesktopPluginComponent {
                             }
                         },
                         {
+                            text: I18n.tr("Float Image"),
+                            icon: "picture_in_picture",
+                            visible: root.selectedFilePaths.length === 1 && root.isImage(quickMenu.currentName),
+                            action: function() {
+                                quickMenu.close();
+                                const path = root.selectedFilePaths[0];
+                                Quickshell.execDetached(["dms", "ipc", "call", "floaty", "floatFromUrl", "file://" + path]);
+                            }
+                        },
+                        {
                             text: I18n.tr("Copy"),
                             icon: "content_copy",
                             visible: true,
@@ -1924,6 +1991,165 @@ DesktopPluginComponent {
 
 
 
+    // Filter Dropdown Popup
+    Popup {
+        id: filterDropdown
+        parent: filterBtn
+        width: 160
+        height: filterDropdownColumn.implicitHeight + Theme.spacingS * 2
+        padding: 0
+        modal: true
+        dim: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        x: filterBtn.width - filterDropdown.width
+        y: filterBtn.height + 4
+ 
+        background: Rectangle {
+            color: "transparent"
+        }
+ 
+        contentItem: Rectangle {
+            color: Theme.surfaceContainer
+            radius: Theme.cornerRadius
+            border.color: Theme.withAlpha(Theme.outline, 0.15)
+            border.width: 1
+ 
+            Column {
+                id: filterDropdownColumn
+                anchors.fill: parent
+                anchors.margins: Theme.spacingS
+                spacing: 4
+ 
+                // Section 1: File Type
+                StyledText {
+                    text: I18n.tr("File Type")
+                    font.pixelSize: Theme.fontSizeSmall - 1
+                    font.bold: true
+                    color: Theme.surfaceVariantText
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.spacingS
+                }
+ 
+                Repeater {
+                    model: [
+                        { label: I18n.tr("All Files"), value: "all", icon: "menu" },
+                        { label: I18n.tr("Folders Only"), value: "folders", icon: "folder" },
+                        { label: I18n.tr("Files Only"), value: "files", icon: "description" },
+                        { label: I18n.tr("Images Only"), value: "images", icon: "image" },
+                        { label: I18n.tr("Documents Only"), value: "documents", icon: "article" },
+                        { label: I18n.tr("Audio & Video"), value: "audio_video", icon: "movie" }
+                    ]
+ 
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 24
+                        radius: Theme.cornerRadius - 2
+                        color: typeArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.15) : "transparent"
+ 
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+ 
+                            DankIcon {
+                                name: modelData.icon
+                                size: 12
+                                color: root.filterType === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+ 
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Theme.fontSizeSmall - 1
+                                font.bold: root.filterType === modelData.value
+                                color: root.filterType === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+ 
+                        MouseArea {
+                            id: typeArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.filterType = modelData.value;
+                                filterDropdown.close();
+                            }
+                        }
+                    }
+                }
+ 
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: Theme.withAlpha(Theme.outline, 0.1)
+                }
+ 
+                // Section 2: Time
+                StyledText {
+                    text: I18n.tr("Time Modified")
+                    font.pixelSize: Theme.fontSizeSmall - 1
+                    font.bold: true
+                    color: Theme.surfaceVariantText
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.spacingS
+                }
+ 
+                Repeater {
+                    model: [
+                        { label: I18n.tr("Any Time"), value: "all", icon: "schedule" },
+                        { label: I18n.tr("Last 24 Hours"), value: "today", icon: "today" },
+                        { label: I18n.tr("Last 7 Days"), value: "week", icon: "date_range" },
+                        { label: I18n.tr("Last 30 Days"), value: "month", icon: "calendar_month" },
+                        { label: I18n.tr("Last 365 Days"), value: "year", icon: "history" }
+                    ]
+ 
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 24
+                        radius: Theme.cornerRadius - 2
+                        color: timeArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.15) : "transparent"
+ 
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+ 
+                            DankIcon {
+                                name: modelData.icon
+                                size: 12
+                                color: root.filterTime === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+ 
+                            StyledText {
+                                text: modelData.label
+                                font.pixelSize: Theme.fontSizeSmall - 1
+                                font.bold: root.filterTime === modelData.value
+                                color: root.filterTime === modelData.value ? Theme.primary : Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+ 
+                        MouseArea {
+                            id: timeArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.filterTime = modelData.value;
+                                filterDropdown.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+ 
     // Native Folder Dialog Selector
     FolderDialog {
         id: folderPickerDialog
