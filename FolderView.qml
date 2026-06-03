@@ -1524,9 +1524,9 @@ DesktopPluginComponent {
                             }
                         },
                         {
-                            text: I18n.tr("Float Image"),
+                            text: I18n.tr("Float File"),
                             icon: "picture_in_picture",
-                            visible: root.selectedFilePaths.length === 1 && root.isImage(quickMenu.currentName),
+                            visible: root.selectedFilePaths.length === 1 && (root.isImage(quickMenu.currentName) || quickMenu.currentName.toLowerCase().endsWith(".pdf")),
                             action: function() {
                                 quickMenu.close();
                                 const path = root.selectedFilePaths[0];
