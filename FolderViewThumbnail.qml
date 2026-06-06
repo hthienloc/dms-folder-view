@@ -79,6 +79,7 @@ Item {
     }
 
     function getIconName(fileName, isDir) {
+        if (filePath.startsWith("stack://")) return "layers";
         if (isDir) return "folder";
         const parts = fileName.split('.');
         const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
@@ -95,6 +96,7 @@ Item {
     }
 
     function getIconColor(fileName, isDir) {
+        if (filePath.startsWith("stack://")) return "#FFB300"; // Stack color: Amber/Gold
         if (isDir) return Theme.primary;
         const parts = fileName.split('.');
         const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";

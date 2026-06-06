@@ -37,6 +37,10 @@ DesktopPluginComponent {
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
     onPinnedPathsChanged: updateFilteredModel()
 
+    property var stacks: pluginData.stacks ?? []
+    onStacksChanged: updateFilteredModel()
+    property var expandedStackIds: []
+
     readonly property bool isScrolledDown: {
         if (viewMode === "grid") {
             return (typeof fileGrid !== "undefined" && fileGrid) ? fileGrid.contentY > 50 : false;
@@ -299,6 +303,24 @@ DesktopPluginComponent {
         let unpinnedDirs = [];
         let unpinnedFiles = [];
 
+        // Load stacks in this folder and get list of files in collapsed stacks
+        let currentFolderStacks = [];
+        let collapsedFilePaths = new Set();
+        try {
+            let sList = root.stacks || [];
+            currentFolderStacks = sList.filter(s => s.folder === root.targetFolderUrl);
+            for (let s of currentFolderStacks) {
+                let isExpanded = root.expandedStackIds.indexOf(s.id) !== -1;
+                if (!isExpanded) {
+                    for (let p of s.filePaths) {
+                        collapsedFilePaths.add(p);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log("Error loading stacks: " + e);
+        }
+
         for (let i = 0; i < folderModel.count; i++) {
             try {
                 const fName = folderModel.get(i, "fileName");
@@ -311,6 +333,12 @@ DesktopPluginComponent {
                 }
                 
                 const nameStr = String(fName);
+                let pathStr = String(fPath);
+
+                // Skip file if it is in a collapsed stack
+                if (collapsedFilePaths.has(pathStr)) {
+                    continue;
+                }
                 
                 // 1. Search Pattern filter check
                 if (pattern !== "" && nameStr.toLowerCase().indexOf(pattern) === -1) {
@@ -335,7 +363,6 @@ DesktopPluginComponent {
                     if (root.filterTime === "year" && elapsed > 365 * 24 * 60 * 60 * 1000) continue;
                 }
 
-                let pathStr = String(fPath);
                 let isDesktop = nameStr.endsWith(".desktop") && !fIsDir;
                 let item = {
                     filePath: pathStr,
@@ -344,7 +371,9 @@ DesktopPluginComponent {
                     isDesktop: isDesktop,
                     appName: "",
                     appIcon: "",
-                    appExec: ""
+                    appExec: "",
+                    isStack: false,
+                    isExpanded: false
                 };
                 
                 if (isDesktop) {
@@ -398,11 +427,67 @@ DesktopPluginComponent {
                 console.log("Error processing file at index " + i + ": " + e);
             }
         }
+        // Append virtual stack items to unpinnedDirs
+        for (let s of currentFolderStacks) {
+            let isExpanded = root.expandedStackIds.indexOf(s.id) !== -1;
+            let stackItem = {
+                filePath: "stack://" + s.id,
+                fileName: s.name,
+                fileIsDir: true,
+                isDesktop: false,
+                appName: "",
+                appIcon: "",
+                appExec: "",
+                isStack: true,
+                isExpanded: isExpanded
+            };
+            unpinnedDirs.push(stackItem);
+        }
+
 
         pinnedDirs.forEach(function(item) { filteredModel.append(item); });
         pinnedFiles.forEach(function(item) { filteredModel.append(item); });
         unpinnedDirs.forEach(function(item) { filteredModel.append(item); });
         unpinnedFiles.forEach(function(item) { filteredModel.append(item); });
+    }
+
+    function createStack(stackName, filePaths) {
+        let newStack = {
+            "id": "stack_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+            "name": stackName,
+            "folder": root.targetFolderUrl,
+            "filePaths": filePaths
+        };
+        let newStacks = [...stacks, newStack];
+        root.stacks = newStacks;
+        if (pluginService) {
+            pluginService.savePluginData(pluginId, "stacks", newStacks);
+        }
+        clearSelection();
+        updateFilteredModel();
+    }
+
+    function ungroupStack(stackId) {
+        let newStacks = stacks.filter(s => s.id !== stackId);
+        root.stacks = newStacks;
+        if (pluginService) {
+            pluginService.savePluginData(pluginId, "stacks", newStacks);
+        }
+        expandedStackIds = expandedStackIds.filter(id => id !== stackId);
+        clearSelection();
+        updateFilteredModel();
+    }
+
+    function toggleStackExpanded(stackId) {
+        let arr = [...expandedStackIds];
+        let idx = arr.indexOf(stackId);
+        if (idx === -1) {
+            arr.push(stackId);
+        } else {
+            arr.splice(idx, 1);
+        }
+        expandedStackIds = arr;
+        updateFilteredModel();
     }
 
     onSearchPatternChanged: updateFilteredModel()
@@ -1079,6 +1164,11 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (delegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = delegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         if (mouse.modifiers & Qt.ControlModifier) {
                                             root.toggleSelection(delegateRoot.filePath);
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
@@ -1105,6 +1195,11 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (delegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = delegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         isLaunching = true;
                                         launchPulse.restart();
                                         launchTimer.restart();
@@ -1253,6 +1348,11 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (listDelegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = listDelegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         if (mouse.modifiers & Qt.ControlModifier) {
                                             root.toggleSelection(listDelegateRoot.filePath);
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
@@ -1279,6 +1379,11 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (listDelegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = listDelegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         listDelegateRoot.isLaunching = true;
                                         listLaunchPulse.restart();
                                         // Open file/folder using default system application
@@ -1428,6 +1533,11 @@ DesktopPluginComponent {
 
                                 onClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (compactDelegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = compactDelegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         if (mouse.modifiers & Qt.ControlModifier) {
                                             root.toggleSelection(compactDelegateRoot.filePath);
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
@@ -1454,6 +1564,11 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        if (compactDelegateRoot.filePath.startsWith("stack://")) {
+                                            let stackId = compactDelegateRoot.filePath.substring(8);
+                                            root.toggleStackExpanded(stackId);
+                                            return;
+                                        }
                                         compactDelegateRoot.isLaunching = true;
                                         compactLaunchPulse.restart();
                                         // Open file/folder using default system application
@@ -1629,7 +1744,7 @@ DesktopPluginComponent {
                         {
                             text: I18n.tr("Rename"),
                             icon: "edit",
-                            visible: root.selectedFilePaths.length <= 1,
+                            visible: root.selectedFilePaths.length <= 1 && !quickMenu.currentPath.startsWith("stack://"),
                             action: function() {
                                 quickMenu.close();
                                 renameDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
@@ -1638,7 +1753,7 @@ DesktopPluginComponent {
                         {
                             text: I18n.tr("Info"),
                             icon: "info",
-                            visible: root.selectedFilePaths.length <= 1,
+                            visible: root.selectedFilePaths.length <= 1 && !quickMenu.currentPath.startsWith("stack://"),
                             action: function() {
                                 quickMenu.close();
                                 infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
@@ -1646,10 +1761,29 @@ DesktopPluginComponent {
                         },
                         {
                             actionName: "pin",
-                            visible: true,
+                            visible: !quickMenu.currentPath.startsWith("stack://"),
                             action: function() {
                                 quickMenu.close();
                                 root.togglePin(quickMenu.currentPath);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Group into Stack"),
+                            icon: "layers",
+                            visible: root.selectedFilePaths.length > 1 && root.selectedFilePaths.every(p => !p.startsWith("stack://")),
+                            action: function() {
+                                quickMenu.close();
+                                createStackDialog.showFor(root.selectedFilePaths);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Ungroup Stack"),
+                            icon: "layers_clear",
+                            visible: root.selectedFilePaths.length === 1 && quickMenu.currentPath.startsWith("stack://"),
+                            action: function() {
+                                quickMenu.close();
+                                let stackId = quickMenu.currentPath.substring(8);
+                                root.ungroupStack(stackId);
                             }
                         },
                         { isSeparator: true },
@@ -1657,7 +1791,7 @@ DesktopPluginComponent {
                             text: I18n.tr("Move to Trash"),
                             icon: "delete",
                             dangerous: true,
-                            visible: true,
+                            visible: root.selectedFilePaths.every(p => !p.startsWith("stack://")),
                             action: function() {
                                 quickMenu.close();
                                 const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
@@ -1736,6 +1870,12 @@ DesktopPluginComponent {
     // Rename Dialog
     FolderViewRenameDialog {
         id: renameDialog
+        parent: root
+    }
+
+    // Create Stack Dialog
+    FolderViewCreateStackDialog {
+        id: createStackDialog
         parent: root
     }
 
