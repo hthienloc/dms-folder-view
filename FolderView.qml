@@ -306,6 +306,8 @@ DesktopPluginComponent {
         // Load stacks in this folder and get list of files in collapsed stacks
         let currentFolderStacks = [];
         let collapsedFilePaths = new Set();
+        let fileToExpandedStackMap = {}; // filePath -> stackId
+        let expandedStackFilesMap = {}; // stackId -> array of item objects
         try {
             let sList = root.stacks || [];
             currentFolderStacks = sList.filter(s => s.folder === root.targetFolderUrl);
@@ -314,6 +316,10 @@ DesktopPluginComponent {
                 if (!isExpanded) {
                     for (let p of s.filePaths) {
                         collapsedFilePaths.add(p);
+                    }
+                } else {
+                    for (let p of s.filePaths) {
+                        fileToExpandedStackMap[p] = s.id;
                     }
                 }
             }
@@ -373,9 +379,52 @@ DesktopPluginComponent {
                     appIcon: "",
                     appExec: "",
                     isStack: false,
-                    isExpanded: false
+                    isExpanded: false,
+                    belongingStackId: ""
                 };
                 
+                let expandedStackId = fileToExpandedStackMap[pathStr];
+                if (expandedStackId !== undefined) {
+                    item.belongingStackId = expandedStackId;
+                    if (!expandedStackFilesMap[expandedStackId]) {
+                        expandedStackFilesMap[expandedStackId] = [];
+                    }
+                    expandedStackFilesMap[expandedStackId].push(item);
+                    
+                    if (isDesktop) {
+                        let safePath = root._cleanPath(pathStr);
+                        Proc.runCommand("parseDesktop-" + Math.random(), ["cat", safePath], (out, code) => {
+                            if (code === 0 && out) {
+                                let aName = "";
+                                let aIcon = "";
+                                let aExec = "";
+                                let lines = out.split('\n');
+                                for (let j = 0; j < lines.length; j++) {
+                                    let l = lines[j].trim();
+                                    if (l.startsWith("Name=") && !aName) aName = l.substring(5).trim();
+                                    else if (l.startsWith("Icon=") && !aIcon) aIcon = l.substring(5).trim();
+                                    else if (l.startsWith("Exec=") && !aExec) aExec = l.substring(5).trim();
+                                }
+                                
+                                let targetIdx = -1;
+                                for (let k = 0; k < filteredModel.count; k++) {
+                                    if (filteredModel.get(k).filePath === pathStr) {
+                                        targetIdx = k;
+                                        break;
+                                    }
+                                }
+                                
+                                if (targetIdx !== -1) {
+                                    filteredModel.setProperty(targetIdx, "appName", aName);
+                                    filteredModel.setProperty(targetIdx, "appIcon", aIcon);
+                                    filteredModel.setProperty(targetIdx, "appExec", aExec);
+                                }
+                            }
+                        });
+                    }
+                    continue; // Skip partitioning to general list
+                }
+
                 if (isDesktop) {
                     let safePath = root._cleanPath(pathStr);
                     Proc.runCommand("parseDesktop-" + Math.random(), ["cat", safePath], (out, code) => {
@@ -427,6 +476,7 @@ DesktopPluginComponent {
                 console.log("Error processing file at index " + i + ": " + e);
             }
         }
+        
         // Append virtual stack items to unpinnedDirs
         for (let s of currentFolderStacks) {
             let isExpanded = root.expandedStackIds.indexOf(s.id) !== -1;
@@ -439,15 +489,26 @@ DesktopPluginComponent {
                 appIcon: "",
                 appExec: "",
                 isStack: true,
-                isExpanded: isExpanded
+                isExpanded: isExpanded,
+                belongingStackId: s.id
             };
             unpinnedDirs.push(stackItem);
         }
 
-
         pinnedDirs.forEach(function(item) { filteredModel.append(item); });
         pinnedFiles.forEach(function(item) { filteredModel.append(item); });
-        unpinnedDirs.forEach(function(item) { filteredModel.append(item); });
+        
+        // Append unpinned dirs (including stacks). If stack is expanded, append its files inline!
+        unpinnedDirs.forEach(function(item) {
+            filteredModel.append(item);
+            if (item.isStack && item.isExpanded) {
+                let sFiles = expandedStackFilesMap[item.belongingStackId] || [];
+                sFiles.forEach(function(f) {
+                    filteredModel.append(f);
+                });
+            }
+        });
+        
         unpinnedFiles.forEach(function(item) { filteredModel.append(item); });
     }
 
@@ -1081,7 +1142,8 @@ DesktopPluginComponent {
                         required property string appName
                         required property string appIcon
                         required property string appExec
-
+                        required property bool isStack
+                        required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -1108,9 +1170,19 @@ DesktopPluginComponent {
                                 ? Theme.withAlpha(Theme.primary, 0.3)
                                 : (isSelected 
                                     ? Theme.withAlpha(Theme.primary, 0.15) 
-                                    : (itemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent"))
-                            border.color: isLaunching ? Theme.primary : (isSelected ? Theme.primary : "transparent")
-                            border.width: isLaunching ? 2 : (isSelected ? 1 : 0)
+                                    : (delegateRoot.belongingStackId !== ""
+                                        ? (delegateRoot.isStack
+                                            ? (itemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.22) : Theme.withAlpha(Theme.primary, 0.12))
+                                            : (itemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.12) : Theme.withAlpha(Theme.primary, 0.05)))
+                                        : (itemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent")))
+                            border.color: isLaunching 
+                                ? Theme.primary 
+                                : (isSelected 
+                                    ? Theme.primary 
+                                    : (delegateRoot.belongingStackId !== ""
+                                        ? (delegateRoot.isStack ? Theme.primary : Theme.withAlpha(Theme.primary, 0.25))
+                                        : "transparent"))
+                            border.width: isLaunching ? 2 : (isSelected ? 1 : (delegateRoot.belongingStackId !== "" ? 1 : 0))
 
                             Column {
                                 anchors.fill: parent
@@ -1264,7 +1336,8 @@ DesktopPluginComponent {
                         required property string appName
                         required property string appIcon
                         required property string appExec
-
+                        required property bool isStack
+                        required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -1292,9 +1365,19 @@ DesktopPluginComponent {
                                 ? Theme.withAlpha(Theme.primary, 0.3)
                                 : (isSelected 
                                     ? Theme.withAlpha(Theme.primary, 0.15) 
-                                    : (listItemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent"))
-                            border.color: isLaunching ? Theme.primary : (isSelected ? Theme.primary : "transparent")
-                            border.width: isLaunching ? 1 : (isSelected ? 1 : 0)
+                                    : (listDelegateRoot.belongingStackId !== ""
+                                        ? (listDelegateRoot.isStack
+                                            ? (listItemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.22) : Theme.withAlpha(Theme.primary, 0.12))
+                                            : (listItemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.12) : Theme.withAlpha(Theme.primary, 0.05)))
+                                        : (listItemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent")))
+                            border.color: isLaunching 
+                                ? Theme.primary 
+                                : (isSelected 
+                                    ? Theme.primary 
+                                    : (listDelegateRoot.belongingStackId !== ""
+                                        ? (listDelegateRoot.isStack ? Theme.primary : Theme.withAlpha(Theme.primary, 0.25))
+                                        : "transparent"))
+                            border.width: isLaunching ? 1 : (isSelected ? 1 : (listDelegateRoot.belongingStackId !== "" ? 1 : 0))
 
                             Row {
                                 id: listRow
@@ -1449,7 +1532,8 @@ DesktopPluginComponent {
                         required property string appName
                         required property string appIcon
                         required property string appExec
-
+                        required property bool isStack
+                        required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
@@ -1477,9 +1561,19 @@ DesktopPluginComponent {
                                 ? Theme.withAlpha(Theme.primary, 0.3)
                                 : (isSelected 
                                     ? Theme.withAlpha(Theme.primary, 0.15) 
-                                    : (compactItemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent"))
-                            border.color: isLaunching ? Theme.primary : (isSelected ? Theme.primary : "transparent")
-                            border.width: isLaunching ? 1 : (isSelected ? 1 : 0)
+                                    : (compactDelegateRoot.belongingStackId !== ""
+                                        ? (compactDelegateRoot.isStack
+                                            ? (compactItemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.22) : Theme.withAlpha(Theme.primary, 0.12))
+                                            : (compactItemHover.containsMouse ? Theme.withAlpha(Theme.primary, 0.12) : Theme.withAlpha(Theme.primary, 0.05)))
+                                        : (compactItemHover.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.06) : "transparent")))
+                            border.color: isLaunching 
+                                ? Theme.primary 
+                                : (isSelected 
+                                    ? Theme.primary 
+                                    : (compactDelegateRoot.belongingStackId !== ""
+                                        ? (compactDelegateRoot.isStack ? Theme.primary : Theme.withAlpha(Theme.primary, 0.25))
+                                        : "transparent"))
+                            border.width: isLaunching ? 1 : (isSelected ? 1 : (compactDelegateRoot.belongingStackId !== "" ? 1 : 0))
 
                             Row {
                                 id: compactRow

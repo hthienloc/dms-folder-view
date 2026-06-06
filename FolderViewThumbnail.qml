@@ -96,7 +96,7 @@ Item {
     }
 
     function getIconColor(fileName, isDir) {
-        if (filePath.startsWith("stack://")) return "#FFB300"; // Stack color: Amber/Gold
+        if (filePath.startsWith("stack://")) return Theme.primary; // Stack color: System Theme Accent
         if (isDir) return Theme.primary;
         const parts = fileName.split('.');
         const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
