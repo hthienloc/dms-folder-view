@@ -32,6 +32,7 @@ DesktopPluginComponent {
     readonly property double sizeScale: cellSize / 84.0
     readonly property string sortBy: pluginData.sortBy ?? "name"
     readonly property string viewMode: pluginData.viewMode ?? "grid"
+    readonly property string headerPosition: pluginData.headerPosition ?? "top"
     readonly property bool showHeader: pluginData.showHeader ?? true
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
     onPinnedPathsChanged: updateFilteredModel()
@@ -584,17 +585,32 @@ DesktopPluginComponent {
         border.color: root.editMode ? Theme.primary : Theme.withAlpha(Theme.outline, root.borderOpacity)
         border.width: root.editMode ? 2 : 1
 
-        Column {
+        Item {
             anchors.fill: parent
             anchors.margins: Theme.spacingM
-            spacing: Theme.spacingS
 
             // Premium Header (Optional)
             Item {
                 id: headerContainer
-                width: parent.width
+                anchors.left: parent.left
+                anchors.right: parent.right
                 height: 24
                 visible: root.showHeader
+
+                // Default anchors: top
+                anchors.top: parent.top
+
+                states: [
+                    State {
+                        name: "bottom"
+                        when: root.headerPosition === "bottom"
+                        AnchorChanges {
+                            target: headerContainer
+                            anchors.top: undefined
+                            anchors.bottom: parent.bottom
+                        }
+                    }
+                ]
 
                 // Left: Folder Selector + File Status
                 Row {
@@ -899,9 +915,32 @@ DesktopPluginComponent {
             }
             // Grid View container
             Item {
-                width: parent.width
-                height: parent.height - (root.showHeader ? headerContainer.height + parent.spacing : 0)
+                id: filesContainer
+                anchors.left: parent.left
+                anchors.right: parent.right
                 clip: true
+
+                // Default anchors: header at top
+                anchors.top: (root.showHeader && root.headerPosition === "top") ? headerContainer.bottom : parent.top
+                anchors.topMargin: (root.showHeader && root.headerPosition === "top") ? Theme.spacingS : 0
+                anchors.bottom: parent.bottom
+
+                states: [
+                    State {
+                        name: "headerBottom"
+                        when: root.showHeader && root.headerPosition === "bottom"
+                        AnchorChanges {
+                            target: filesContainer
+                            anchors.top: parent.top
+                            anchors.bottom: headerContainer.top
+                        }
+                        PropertyChanges {
+                            target: filesContainer
+                            anchors.topMargin: 0
+                            anchors.bottomMargin: Theme.spacingS
+                        }
+                    }
+                ]
 
                 FolderListModel {
                     id: folderModel
@@ -1731,7 +1770,7 @@ DesktopPluginComponent {
         dim: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         x: 0
-        y: folderSelectorBtn.height + 4
+        y: root.headerPosition === "bottom" ? -height - 4 : folderSelectorBtn.height + 4
 
         background: Rectangle {
             color: "transparent"
@@ -1828,7 +1867,7 @@ DesktopPluginComponent {
         dim: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         x: createBtn.width - createDropdown.width
-        y: createBtn.height + 4
+        y: root.headerPosition === "bottom" ? -height - 4 : createBtn.height + 4
 
         background: Rectangle {
             color: "transparent"
@@ -1917,7 +1956,7 @@ DesktopPluginComponent {
         dim: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         x: sortByBtn.width - sortByDropdown.width
-        y: sortByBtn.height + 4
+        y: root.headerPosition === "bottom" ? -height - 4 : sortByBtn.height + 4
 
         background: Rectangle {
             color: "transparent"
@@ -2007,7 +2046,7 @@ DesktopPluginComponent {
         dim: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         x: filterBtn.width - filterDropdown.width
-        y: filterBtn.height + 4
+        y: root.headerPosition === "bottom" ? -height - 4 : filterBtn.height + 4
  
         background: Rectangle {
             color: "transparent"

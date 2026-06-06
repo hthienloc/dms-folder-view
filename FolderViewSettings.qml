@@ -15,12 +15,13 @@ PluginSettings {
         SectionTitle { 
             text: I18n.tr("Appearance")
             icon: "palette" 
-            showReset: backgroundOpacity.isDirty || borderOpacity.isDirty || cellSize.isDirty || viewMode.isDirty || showHeader.isDirty || showHidden.isDirty
+            showReset: backgroundOpacity.isDirty || borderOpacity.isDirty || cellSize.isDirty || viewMode.isDirty || headerPosition.isDirty || showHeader.isDirty || showHidden.isDirty
             onResetClicked: {
                 backgroundOpacity.resetToDefault();
                 borderOpacity.resetToDefault();
                 cellSize.resetToDefault();
                 viewMode.resetToDefault();
+                headerPosition.resetToDefault();
                 showHeader.resetToDefault();
                 showHidden.resetToDefault();
             }
@@ -79,6 +80,19 @@ PluginSettings {
                 { label: I18n.tr("Compact View"), value: "compact" }
             ]
             defaultValue: "grid"
+        }
+
+        Separator {}
+
+        ButtonGroupSettingPlus {
+            id: headerPosition
+            settingKey: "headerPosition"
+            label: I18n.tr("Header Position")
+            options: [
+                { label: I18n.tr("Top"),    value: "top"    },
+                { label: I18n.tr("Bottom"), value: "bottom" }
+            ]
+            defaultValue: "top"
         }
 
         Separator {}
