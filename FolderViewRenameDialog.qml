@@ -139,14 +139,12 @@ Popup {
     function performRename() {
         try {
             if (!renameDialog.inputField) {
-                ToastService.showToast("Rename debug: inputField is null", ToastService.levelError);
                 renameDialog.close();
                 return;
             }
 
             const newBaseName = renameDialog.inputField.text.trim();
             const newName = newBaseName + renameDialog.fileExt;
-            ToastService.showToast("Rename debug: new=" + newName + " old=" + renameDialog.oldName, ToastService.levelInfo);
 
             if (newName.length === 0 || newName === renameDialog.oldName) {
                 renameDialog.close();
@@ -162,7 +160,6 @@ Popup {
                 renameDialog.close();
                 return;
             }
-            ToastService.showToast("Rename debug: path=" + pathStr, ToastService.levelInfo);
 
             if (pathStr.startsWith("file://")) {
                 pathStr = pathStr.substring(7);
@@ -180,11 +177,9 @@ Popup {
             const dirPath = parts.join("/");
             const newPath = dirPath + "/" + newName;
 
-            ToastService.showToast("Rename debug: mv " + pathStr + " -> " + newPath, ToastService.levelInfo);
-
             Quickshell.execDetached(["mv", pathStr, newPath]);
         } catch (e) {
-            ToastService.showToast("Rename error: " + e.message, ToastService.levelError);
+            ToastService.showToast(I18n.tr("Rename failed") + ": " + e.message, ToastService.levelError);
         }
         renameDialog.close();
     }
