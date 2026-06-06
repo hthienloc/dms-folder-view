@@ -528,6 +528,20 @@ DesktopPluginComponent {
         updateFilteredModel();
     }
 
+    function renameStack(stackId, newName) {
+        let newStacks = stacks.map(s => {
+            if (s.id === stackId) {
+                s.name = newName;
+            }
+            return s;
+        });
+        root.stacks = newStacks;
+        if (pluginService) {
+            pluginService.savePluginData(pluginId, "stacks", newStacks);
+        }
+        updateFilteredModel();
+    }
+
     function ungroupStack(stackId) {
         let newStacks = stacks.filter(s => s.id !== stackId);
         root.stacks = newStacks;
@@ -1838,7 +1852,7 @@ DesktopPluginComponent {
                         {
                             text: I18n.tr("Rename"),
                             icon: "edit",
-                            visible: root.selectedFilePaths.length <= 1 && !quickMenu.currentPath.startsWith("stack://"),
+                            visible: root.selectedFilePaths.length <= 1,
                             action: function() {
                                 quickMenu.close();
                                 renameDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);

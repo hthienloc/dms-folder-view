@@ -106,11 +106,14 @@ Popup {
 
     function showFor(path, name, isDirectory) {
         let cleanPath = String(path);
-        if (cleanPath.startsWith("file://")) {
-            cleanPath = cleanPath.substring(7);
-        }
-        if (cleanPath.startsWith("localhost/")) {
-            cleanPath = cleanPath.substring(9);
+        let isVirtualStack = cleanPath.startsWith("stack://");
+        if (!isVirtualStack) {
+            if (cleanPath.startsWith("file://")) {
+                cleanPath = cleanPath.substring(7);
+            }
+            if (cleanPath.startsWith("localhost/")) {
+                cleanPath = cleanPath.substring(9);
+            }
         }
         renameDialog.filePath = cleanPath;
         renameDialog.oldName = name;
@@ -151,6 +154,14 @@ Popup {
             }
 
             let pathStr = String(renameDialog.filePath);
+            if (pathStr.startsWith("stack://")) {
+                let stackId = pathStr.substring(8);
+                if (typeof parent.renameStack === "function") {
+                    parent.renameStack(stackId, newBaseName);
+                }
+                renameDialog.close();
+                return;
+            }
             ToastService.showToast("Rename debug: path=" + pathStr, ToastService.levelInfo);
 
             if (pathStr.startsWith("file://")) {
