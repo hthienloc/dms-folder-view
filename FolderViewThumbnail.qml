@@ -35,8 +35,15 @@ Item {
         return ext === "pdf";
     }
 
+    readonly property bool isVideo: {
+        const parts = fileName.split('.');
+        if (parts.length < 2) return false;
+        const ext = parts.pop().toLowerCase();
+        return ["mp4", "mkv", "avi", "mov", "webm", "flv", "ogv", "3gp", "mpeg", "mpg"].indexOf(ext) !== -1;
+    }
+
     property string artSource: ""
-    property bool showThumbnail: (isImage || isAudio || isPDF || root.appIcon !== "") && !isDir && artSource !== "failed"
+    property bool showThumbnail: (isImage || isAudio || isPDF || isVideo || root.appIcon !== "") && !isDir && artSource !== "failed"
 
     DankIcon {
         anchors.centerIn: parent
@@ -149,6 +156,8 @@ Item {
                 extractAudioArt(rawPath, cacheDir, cachePath, hash);
             } else if (isPDF) {
                 extractPDFThumb(rawPath, cacheDir, cachePath, hash);
+            } else if (isVideo) {
+                extractVideoThumb(rawPath, cacheDir, cachePath, hash);
             }
         }
     }
@@ -196,9 +205,31 @@ Item {
         });
     }
 
+    function extractVideoThumb(rawPath, cacheDir, cachePath, hash) {
+        Quickshell.execDetached(["mkdir", "-p", cacheDir]);
+        
+        Proc.runCommand("check-video-" + hash, ["test", "-f", cachePath], (out, code) => {
+            if (!root) return;
+            if (code === 0) {
+                root.artSource = "file://" + cachePath;
+            } else {
+                const cmd = ["ffmpeg", "-y", "-ss", "00:00:02", "-i", rawPath, "-vf", "scale=128:-1", "-frames:v", "1", "-f", "image2", cachePath];
+                Proc.runCommand("extract-video-" + hash, cmd, (out2, code2) => {
+                    if (!root) return;
+                    if (code2 === 0) {
+                        root.artSource = "file://" + cachePath;
+                    } else {
+                        root.artSource = "failed";
+                    }
+                }, 100);
+            }
+        });
+    }
+
     onFilePathChanged: requestThumbnail()
     onIsAudioChanged: requestThumbnail()
     onIsPDFChanged: requestThumbnail()
+    onIsVideoChanged: requestThumbnail()
 
     Component.onCompleted: requestThumbnail()
 }
