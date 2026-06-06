@@ -311,6 +311,14 @@ DesktopPluginComponent {
         try {
             let sList = root.stacks || [];
             currentFolderStacks = sList.filter(s => s.folder === root.targetFolderUrl);
+            
+            // Sort stacks based on sortBy setting
+            if (root.sortBy === "time") {
+                currentFolderStacks.sort((a, b) => b.id.localeCompare(a.id));
+            } else {
+                currentFolderStacks.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
+            }
+
             for (let s of currentFolderStacks) {
                 let isExpanded = root.expandedStackIds.indexOf(s.id) !== -1;
                 if (!isExpanded) {
@@ -477,7 +485,10 @@ DesktopPluginComponent {
             }
         }
         
-        // Append virtual stack items to unpinnedDirs
+        let pinnedStacks = [];
+        let unpinnedStacks = [];
+
+        // Append virtual stack items to pinnedStacks or unpinnedStacks
         for (let s of currentFolderStacks) {
             let isExpanded = root.expandedStackIds.indexOf(s.id) !== -1;
             let stackItem = {
@@ -492,14 +503,17 @@ DesktopPluginComponent {
                 isExpanded: isExpanded,
                 belongingStackId: isExpanded ? s.id : ""
             };
-            unpinnedDirs.push(stackItem);
+            
+            let isPinned = root.pinnedPaths.indexOf("stack://" + s.id) !== -1;
+            if (isPinned) {
+                pinnedStacks.push(stackItem);
+            } else {
+                unpinnedStacks.push(stackItem);
+            }
         }
 
-        pinnedDirs.forEach(function(item) { filteredModel.append(item); });
-        pinnedFiles.forEach(function(item) { filteredModel.append(item); });
-        
-        // Append unpinned dirs (including stacks). If stack is expanded, append its files inline!
-        unpinnedDirs.forEach(function(item) {
+        // 1. Pinned Stacks
+        pinnedStacks.forEach(function(item) {
             filteredModel.append(item);
             if (item.isStack && item.isExpanded) {
                 let sFiles = expandedStackFilesMap[item.belongingStackId] || [];
@@ -508,7 +522,28 @@ DesktopPluginComponent {
                 });
             }
         });
+
+        // 2. Pinned Directories
+        pinnedDirs.forEach(function(item) { filteredModel.append(item); });
+
+        // 3. Pinned Files
+        pinnedFiles.forEach(function(item) { filteredModel.append(item); });
         
+        // 4. Unpinned Stacks
+        unpinnedStacks.forEach(function(item) {
+            filteredModel.append(item);
+            if (item.isStack && item.isExpanded) {
+                let sFiles = expandedStackFilesMap[item.belongingStackId] || [];
+                sFiles.forEach(function(f) {
+                    filteredModel.append(f);
+                });
+            }
+        });
+
+        // 5. Unpinned Directories
+        unpinnedDirs.forEach(function(item) { filteredModel.append(item); });
+        
+        // 6. Unpinned Files
         unpinnedFiles.forEach(function(item) { filteredModel.append(item); });
     }
 
@@ -1869,7 +1904,7 @@ DesktopPluginComponent {
                         },
                         {
                             actionName: "pin",
-                            visible: !quickMenu.currentPath.startsWith("stack://"),
+                            visible: true,
                             action: function() {
                                 quickMenu.close();
                                 root.togglePin(quickMenu.currentPath);
