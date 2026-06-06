@@ -101,12 +101,12 @@ Item {
         const parts = fileName.split('.');
         const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
         switch (ext) {
-            case "mp3": case "wav": case "ogg": case "flac": case "m4a": case "mp4": case "mkv": case "avi": case "mov": case "webm": return "#7C4DFF";
-            case "pdf": return "#FF1744";
-            case "zip": case "tar": case "gz": case "bz2": case "xz": case "rar": case "7z": return "#FF9100";
-            case "txt": case "md": case "json": case "xml": case "yaml": case "yml": case "conf": case "ini": return "#2979FF";
-            case "sh": case "py": case "js": case "ts": case "rs": case "go": case "c": case "cpp": case "h": case "java": case "html": case "css": return "#FF5252";
-            default: return Theme.surfaceText;
+            case "mp3": case "wav": case "ogg": case "flac": case "m4a": case "mp4": case "mkv": case "avi": case "mov": case "webm": return Theme.secondary;
+            case "pdf": return Theme.error;
+            case "zip": case "tar": case "gz": case "bz2": case "xz": case "rar": case "7z": return Theme.warning;
+            case "txt": case "md": case "json": case "xml": case "yaml": case "yml": case "conf": case "ini": return Theme.primary;
+            case "sh": case "py": case "js": case "ts": case "rs": case "go": case "c": case "cpp": case "h": case "java": case "html": case "css": return Theme.primary;
+            default: return Theme.surfaceVariantText;
         }
     }
 

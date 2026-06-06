@@ -490,7 +490,7 @@ DesktopPluginComponent {
                 appExec: "",
                 isStack: true,
                 isExpanded: isExpanded,
-                belongingStackId: s.id
+                belongingStackId: isExpanded ? s.id : ""
             };
             unpinnedDirs.push(stackItem);
         }
