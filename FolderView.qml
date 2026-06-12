@@ -197,6 +197,20 @@ DesktopPluginComponent {
         return path;
     }
 
+    function dragMimeData(filePath) {
+        // Dragging an item that is part of the current selection drags the
+        // whole selection; otherwise just the pressed item.
+        let paths = (root.selectedFilePaths.length > 0 && root.selectedFilePaths.indexOf(filePath) !== -1)
+            ? root.selectedFilePaths
+            : [filePath];
+        paths = paths.filter(p => !String(p).startsWith("stack://")).map(p => root._cleanPath(p));
+        const uris = paths.map(p => "file://" + p.split("/").map(encodeURIComponent).join("/"));
+        return {
+            "text/uri-list": uris.join("\r\n") + "\r\n",
+            "text/plain": paths.join("\n")
+        };
+    }
+
     function launchDesktopFile(path) {
         let cleanPath = root._cleanPath(path);
         let shellCmd = 'cmd=$(grep -m 1 "^Exec=" "' + cleanPath + '" | cut -d= -f2- | sed "s/%[fFuUiIcDkKvV]//g"); exec sh -c "$cmd"';
@@ -1186,6 +1200,32 @@ DesktopPluginComponent {
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            id: gridDragHandler
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !delegateRoot.isStack && !delegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    delegateRoot.Drag.mimeData = root.dragMimeData(delegateRoot.filePath);
+                                    delegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!gridDragHandler.active)
+                                            return;
+                                        delegateRoot.Drag.imageSource = result.url;
+                                        delegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    delegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
+
                         SequentialAnimation {
                             id: launchPulse
                             running: false
@@ -1379,6 +1419,32 @@ DesktopPluginComponent {
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
+
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            id: listDragHandler
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !listDelegateRoot.isStack && !listDelegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    listDelegateRoot.Drag.mimeData = root.dragMimeData(listDelegateRoot.filePath);
+                                    listDelegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!listDragHandler.active)
+                                            return;
+                                        listDelegateRoot.Drag.imageSource = result.url;
+                                        listDelegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    listDelegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
 
                         SequentialAnimation {
                             id: listLaunchPulse
@@ -1575,6 +1641,32 @@ DesktopPluginComponent {
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
+
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            id: compactDragHandler
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !compactDelegateRoot.isStack && !compactDelegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    compactDelegateRoot.Drag.mimeData = root.dragMimeData(compactDelegateRoot.filePath);
+                                    compactDelegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!compactDragHandler.active)
+                                            return;
+                                        compactDelegateRoot.Drag.imageSource = result.url;
+                                        compactDelegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    compactDelegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
 
                         SequentialAnimation {
                             id: compactLaunchPulse
