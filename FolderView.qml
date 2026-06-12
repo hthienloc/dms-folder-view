@@ -204,7 +204,7 @@ DesktopPluginComponent {
             ? root.selectedFilePaths
             : [filePath];
         paths = paths.filter(p => !String(p).startsWith("stack://")).map(p => root._cleanPath(p));
-        const uris = paths.map(p => "file://" + encodeURI(p).replace(/#/g, "%23").replace(/\?/g, "%3F"));
+        const uris = paths.map(p => "file://" + p.split("/").map(encodeURIComponent).join("/"));
         return {
             "text/uri-list": uris.join("\r\n") + "\r\n",
             "text/plain": paths.join("\n")
@@ -1204,6 +1204,7 @@ DesktopPluginComponent {
                         Drag.supportedActions: Qt.CopyAction
 
                         DragHandler {
+                            id: gridDragHandler
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
@@ -1212,6 +1213,10 @@ DesktopPluginComponent {
                                 if (active) {
                                     delegateRoot.Drag.mimeData = root.dragMimeData(delegateRoot.filePath);
                                     delegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!gridDragHandler.active)
+                                            return;
                                         delegateRoot.Drag.imageSource = result.url;
                                         delegateRoot.Drag.active = true;
                                     });
@@ -1419,6 +1424,7 @@ DesktopPluginComponent {
                         Drag.supportedActions: Qt.CopyAction
 
                         DragHandler {
+                            id: listDragHandler
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
@@ -1427,6 +1433,10 @@ DesktopPluginComponent {
                                 if (active) {
                                     listDelegateRoot.Drag.mimeData = root.dragMimeData(listDelegateRoot.filePath);
                                     listDelegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!listDragHandler.active)
+                                            return;
                                         listDelegateRoot.Drag.imageSource = result.url;
                                         listDelegateRoot.Drag.active = true;
                                     });
@@ -1636,6 +1646,7 @@ DesktopPluginComponent {
                         Drag.supportedActions: Qt.CopyAction
 
                         DragHandler {
+                            id: compactDragHandler
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
@@ -1644,6 +1655,10 @@ DesktopPluginComponent {
                                 if (active) {
                                     compactDelegateRoot.Drag.mimeData = root.dragMimeData(compactDelegateRoot.filePath);
                                     compactDelegateRoot.grabToImage(function (result) {
+                                        // grabToImage is async: bail out if the press
+                                        // was already released in the meantime
+                                        if (!compactDragHandler.active)
+                                            return;
                                         compactDelegateRoot.Drag.imageSource = result.url;
                                         compactDelegateRoot.Drag.active = true;
                                     });
