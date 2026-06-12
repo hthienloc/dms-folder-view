@@ -74,12 +74,12 @@ DesktopPluginComponent {
             case "documents":
                 return Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation).toString();
             case "trash":
-                return "file://" + Quickshell.env("HOME") + "/.local/share/Trash/files";
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString() + "/.local/share/Trash/files";
             case "custom": {
                 if (customFolderPath && customFolderPath.trim() !== "") {
-                    let clean = customFolderPath.trim();
+                    const clean = customFolderPath.trim();
                     if (clean.startsWith("~/")) {
-                        clean = Quickshell.env("HOME") + clean.substring(1);
+                        return Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString() + clean.substring(1);
                     }
                     return "file://" + clean;
                 }
