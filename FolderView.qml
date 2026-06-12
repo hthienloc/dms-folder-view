@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import Qt.labs.folderlistmodel
+import Qt.labs.platform as Platform
 import Quickshell
 import Quickshell.Widgets
 import qs.Common
@@ -59,45 +60,34 @@ DesktopPluginComponent {
     readonly property string customFolderPath: pluginData.customFolderPath ?? ""
 
     readonly property string targetFolderUrl: {
-        const home = Quickshell.env("HOME");
-        let path = home + "/Desktop";
-        
         switch (folderType) {
             case "home":
-                path = home;
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.HomeLocation).toString();
             case "downloads":
-                path = home + "/Downloads";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.DownloadLocation).toString();
             case "music":
-                path = home + "/Music";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.MusicLocation).toString();
             case "pictures":
-                path = home + "/Pictures";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.PicturesLocation).toString();
             case "videos":
-                path = home + "/Videos";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.MoviesLocation).toString();
             case "documents":
-                path = home + "/Documents";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.DocumentsLocation).toString();
             case "trash":
-                path = home + "/.local/share/Trash/files";
-                break;
-            case "custom":
+                return "file://" + Quickshell.env("HOME") + "/.local/share/Trash/files";
+            case "custom": {
                 if (customFolderPath && customFolderPath.trim() !== "") {
                     let clean = customFolderPath.trim();
                     if (clean.startsWith("~/")) {
-                        clean = home + clean.substring(1);
+                        clean = Quickshell.env("HOME") + clean.substring(1);
                     }
-                    path = clean;
+                    return "file://" + clean;
                 }
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.DesktopLocation).toString();
+            }
             default:
-                path = home + "/Desktop";
-                break;
+                return Platform.StandardPaths.writableLocation(Platform.StandardPaths.DesktopLocation).toString();
         }
-        return "file://" + path;
     }
 
     readonly property string folderDisplayName: {
