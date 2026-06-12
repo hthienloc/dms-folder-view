@@ -197,6 +197,20 @@ DesktopPluginComponent {
         return path;
     }
 
+    function dragMimeData(filePath) {
+        // Dragging an item that is part of the current selection drags the
+        // whole selection; otherwise just the pressed item.
+        let paths = (root.selectedFilePaths.length > 0 && root.selectedFilePaths.indexOf(filePath) !== -1)
+            ? root.selectedFilePaths
+            : [filePath];
+        paths = paths.filter(p => !String(p).startsWith("stack://")).map(p => root._cleanPath(p));
+        const uris = paths.map(p => "file://" + encodeURI(p).replace(/#/g, "%23").replace(/\?/g, "%3F"));
+        return {
+            "text/uri-list": uris.join("\r\n") + "\r\n",
+            "text/plain": paths.join("\n")
+        };
+    }
+
     function launchDesktopFile(path) {
         let cleanPath = root._cleanPath(path);
         let shellCmd = 'cmd=$(grep -m 1 "^Exec=" "' + cleanPath + '" | cut -d= -f2- | sed "s/%[fFuUiIcDkKvV]//g"); exec sh -c "$cmd"';
@@ -1186,6 +1200,27 @@ DesktopPluginComponent {
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
 
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !delegateRoot.isStack && !delegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    delegateRoot.Drag.mimeData = root.dragMimeData(delegateRoot.filePath);
+                                    delegateRoot.grabToImage(function (result) {
+                                        delegateRoot.Drag.imageSource = result.url;
+                                        delegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    delegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
+
                         SequentialAnimation {
                             id: launchPulse
                             running: false
@@ -1379,6 +1414,27 @@ DesktopPluginComponent {
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
+
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !listDelegateRoot.isStack && !listDelegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    listDelegateRoot.Drag.mimeData = root.dragMimeData(listDelegateRoot.filePath);
+                                    listDelegateRoot.grabToImage(function (result) {
+                                        listDelegateRoot.Drag.imageSource = result.url;
+                                        listDelegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    listDelegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
 
                         SequentialAnimation {
                             id: listLaunchPulse
@@ -1575,6 +1631,27 @@ DesktopPluginComponent {
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
                         property bool isLaunching: false
+
+                        Drag.dragType: Drag.Automatic
+                        Drag.supportedActions: Qt.CopyAction
+
+                        DragHandler {
+                            target: null
+                            acceptedButtons: Qt.LeftButton
+                            grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
+                            enabled: !compactDelegateRoot.isStack && !compactDelegateRoot.filePath.startsWith("stack://")
+                            onActiveChanged: {
+                                if (active) {
+                                    compactDelegateRoot.Drag.mimeData = root.dragMimeData(compactDelegateRoot.filePath);
+                                    compactDelegateRoot.grabToImage(function (result) {
+                                        compactDelegateRoot.Drag.imageSource = result.url;
+                                        compactDelegateRoot.Drag.active = true;
+                                    });
+                                } else {
+                                    compactDelegateRoot.Drag.active = false;
+                                }
+                            }
+                        }
 
                         SequentialAnimation {
                             id: compactLaunchPulse
