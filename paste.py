@@ -33,9 +33,7 @@ def transfer_paths(paths, target_dir, action="copy"):
             # descendants; copytree would otherwise recurse into the destination
             # it just created (nested self-copy / RecursionError).
             src_real = os.path.realpath(src)
-            if os.path.isdir(src) and (
-                src_real == target_real or target_real.startswith(src_real + os.sep)
-            ):
+            if os.path.isdir(src) and os.path.commonpath([src_real, target_real]) == src_real:
                 continue
             if action == "cut":
                 shutil.move(src, target_dir)

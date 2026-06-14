@@ -265,8 +265,8 @@ DesktopPluginComponent {
     }
 
     function pasteFromClipboard() {
-        let scriptPath = root._cleanPath(Qt.resolvedUrl("paste.py"));
-        let pathStr = root._cleanPath(root.targetFolderUrl);
+        let scriptPath = decodeURIComponent(root._cleanPath(Qt.resolvedUrl("paste.py")));
+        let pathStr = decodeURIComponent(root._cleanPath(root.targetFolderUrl));
 
         ToastService.showToast(I18n.tr("Pasting files..."), ToastService.levelInfo);
         Quickshell.execDetached([scriptPath, pathStr]);
@@ -277,8 +277,8 @@ DesktopPluginComponent {
         let fileUris = urls.map(u => String(u)).filter(u => u.startsWith("file://"));
         if (fileUris.length === 0) return;
 
-        let scriptPath = root._cleanPath(Qt.resolvedUrl("paste.py"));
-        let pathStr = root._cleanPath(root.targetFolderUrl);
+        let scriptPath = decodeURIComponent(root._cleanPath(Qt.resolvedUrl("paste.py")));
+        let pathStr = decodeURIComponent(root._cleanPath(root.targetFolderUrl));
 
         ToastService.showToast(I18n.tr("Copying files..."), ToastService.levelInfo);
         Quickshell.execDetached([scriptPath, "--drop", pathStr].concat(fileUris));
@@ -1877,9 +1877,16 @@ DesktopPluginComponent {
                         anchors.fill: parent
                         visible: dropArea.containsDrag
                         radius: Theme.cornerRadius
-                        color: Theme.withAlpha(Theme.primary, 0.12)
-                        border.color: Theme.primary
-                        border.width: 2
+                        // Darkened background overlay for focus
+                        color: Qt.rgba(0, 0, 0, 0.5)
+                        
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Theme.withAlpha(Theme.primary, 0.15)
+                            border.color: Theme.primary
+                            border.width: 2
+                        }
 
                         Column {
                             anchors.centerIn: parent
@@ -1887,7 +1894,7 @@ DesktopPluginComponent {
 
                             DankIcon {
                                 name: "download"
-                                size: 40
+                                size: 48
                                 color: Theme.primary
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
