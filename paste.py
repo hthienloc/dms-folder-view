@@ -6,11 +6,54 @@ import shutil
 import os
 import datetime
 
-def main():
-    if len(sys.argv) < 2:
-        sys.exit(1)
-    target_dir = sys.argv[1]
 
+def uri_to_path(line):
+    """Turn a single clipboard/drop line into a local filesystem path, or None."""
+    line = line.strip()
+    if not line:
+        return None
+    if line.startswith("file://"):
+        line = line[7:]
+    if line.startswith("localhost/"):
+        line = line[9:]
+    decoded = urllib.parse.unquote(line)
+    return decoded if os.path.exists(decoded) else None
+
+
+def transfer_paths(paths, target_dir, action="copy"):
+    """Copy (or move, when action == 'cut') the given paths into target_dir."""
+    target_real = os.path.realpath(target_dir)
+    for src in paths:
+        try:
+            # Skip no-op transfers onto the folder the item already lives in;
+            # copying a file onto itself would otherwise raise SameFileError.
+            if os.path.realpath(os.path.dirname(src)) == target_real:
+                continue
+            # Skip copying a directory onto itself or into one of its own
+            # descendants; copytree would otherwise recurse into the destination
+            # it just created (nested self-copy / RecursionError).
+            src_real = os.path.realpath(src)
+            if os.path.isdir(src) and os.path.commonpath([src_real, target_real]) == src_real:
+                continue
+            if action == "cut":
+                shutil.move(src, target_dir)
+            elif os.path.isdir(src):
+                dest = os.path.join(target_dir, os.path.basename(src))
+                shutil.copytree(src, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, target_dir)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+
+
+def handle_drop(target_dir, uris):
+    """Copy files dropped onto the widget (passed as file:// URIs) into target_dir."""
+    paths = [p for p in (uri_to_path(u) for u in uris) if p]
+    if paths:
+        transfer_paths(paths, target_dir, "copy")
+
+
+def handle_clipboard(target_dir):
     # 1. Check clipboard MIME types for image formats
     try:
         p_types = subprocess.run(['wl-paste', '--list-types'], capture_output=True, text=True)
@@ -79,31 +122,27 @@ def main():
     else:
         file_lines = lines
 
-    paths = []
-    for line in file_lines:
-        if line.startswith("file://"):
-            line = line[7:]
-        if line.startswith("localhost/"):
-            line = line[9:]
-        decoded = urllib.parse.unquote(line)
-        if os.path.exists(decoded):
-            paths.append(decoded)
-
+    paths = [p for p in (uri_to_path(line) for line in file_lines) if p]
     if not paths:
         sys.exit(0)
 
-    for src in paths:
-        try:
-            if action == "cut":
-                shutil.move(src, target_dir)
-            else:
-                if os.path.isdir(src):
-                    dest = os.path.join(target_dir, os.path.basename(src))
-                    shutil.copytree(src, dest, dirs_exist_ok=True)
-                else:
-                    shutil.copy2(src, target_dir)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
+    transfer_paths(paths, target_dir, action)
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(1)
+
+    # Drop mode: paste.py --drop <target_dir> <uri> [<uri> ...]
+    if sys.argv[1] == "--drop":
+        if len(sys.argv) < 3:
+            sys.exit(1)
+        handle_drop(sys.argv[2], sys.argv[3:])
+        return
+
+    # Clipboard mode: paste.py <target_dir>
+    handle_clipboard(sys.argv[1])
+
 
 if __name__ == "__main__":
     main()

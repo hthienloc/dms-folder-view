@@ -265,11 +265,23 @@ DesktopPluginComponent {
     }
 
     function pasteFromClipboard() {
-        let scriptPath = root._cleanPath(Qt.resolvedUrl("paste.py"));
-        let pathStr = root._cleanPath(root.targetFolderUrl);
-        
+        let scriptPath = decodeURIComponent(root._cleanPath(Qt.resolvedUrl("paste.py")));
+        let pathStr = decodeURIComponent(root._cleanPath(root.targetFolderUrl));
+
         ToastService.showToast(I18n.tr("Pasting files..."), ToastService.levelInfo);
         Quickshell.execDetached([scriptPath, pathStr]);
+    }
+
+    function dropFiles(urls) {
+        // Copy files dragged in from external windows into the current folder.
+        let fileUris = urls.map(u => String(u)).filter(u => u.startsWith("file://"));
+        if (fileUris.length === 0) return;
+
+        let scriptPath = decodeURIComponent(root._cleanPath(Qt.resolvedUrl("paste.py")));
+        let pathStr = decodeURIComponent(root._cleanPath(root.targetFolderUrl));
+
+        ToastService.showToast(I18n.tr("Copying files..."), ToastService.levelInfo);
+        Quickshell.execDetached([scriptPath, "--drop", pathStr].concat(fileUris));
     }
 
     onSelectedFilePathsChanged: {
@@ -1835,6 +1847,66 @@ DesktopPluginComponent {
                         opacity: 0.4
                         horizontalAlignment: Text.AlignHCenter
                         anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                }
+
+                // Copy files dragged in from external windows into the current
+                // folder (Drag & Drop In). Disabled for the read-only Trash view.
+                DropArea {
+                    id: dropArea
+                    anchors.fill: parent
+                    z: 100
+                    enabled: root.folderType !== "trash"
+                    keys: ["text/uri-list"]
+
+                    onEntered: drag => {
+                        if (drag.hasUrls)
+                            drag.accept(Qt.CopyAction);
+                        else
+                            drag.accepted = false;
+                    }
+                    onDropped: drop => {
+                        if (!drop.hasUrls)
+                            return;
+                        root.dropFiles(drop.urls);
+                        drop.accept(Qt.CopyAction);
+                    }
+
+                    // Drop hint shown while dragging files over the widget
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: dropArea.containsDrag
+                        radius: Theme.cornerRadius
+                        // Darkened background overlay for focus
+                        color: Qt.rgba(0, 0, 0, 0.5)
+                        
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: Theme.withAlpha(Theme.primary, 0.15)
+                            border.color: Theme.primary
+                            border.width: 2
+                        }
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: Theme.spacingS
+
+                            DankIcon {
+                                name: "download"
+                                size: 48
+                                color: Theme.primary
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+
+                            StyledText {
+                                text: I18n.tr("Drop to copy here")
+                                font.pixelSize: Theme.fontSizeMedium
+                                font.bold: true
+                                color: Theme.primary
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
                     }
                 }
             }
