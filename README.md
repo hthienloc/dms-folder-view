@@ -61,7 +61,7 @@ GPL-3.0
 ## TODO / Roadmap
 
 - [x] **Drag & Drop (Out):** Drag files directly from the widget into external windows.
-- [ ] **Drag & Drop (In):** Support dropping files from external windows into the widget.
+- [x] **Drag & Drop (In):** Support dropping files from external windows into the widget.
 - [ ] **Inline Rename:** Quick renaming by clicking the label of a selected item.
 - [ ] **Favorite Folders:** Dedicated section for pinned/favorite directories for quicker access.
 - [ ] **Customizable Context Menu:** Allow users to add, remove, or reorder actions in the middle-click menu.
