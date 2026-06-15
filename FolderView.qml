@@ -125,6 +125,12 @@ DesktopPluginComponent {
     property string lastSelectedFilePath: ""
     property string searchPattern: ""
 
+    // Inline rename state: file path of the item currently renamed in place
+    // ("" when no item is being renamed). _inlineRenameArmPath holds the path
+    // queued by inlineRenameArmTimer until it fires.
+    property string renamingFilePath: ""
+    property string _inlineRenameArmPath: ""
+
     function clearSelection() {
         selectedFilePaths = [];
         lastSelectedFilePath = "";
@@ -195,6 +201,77 @@ DesktopPluginComponent {
             path = path.substring(9);
         }
         return path;
+    }
+
+    // Single source of truth for renaming, shared by the inline editor and the
+    // rename dialog. Handles both virtual stacks and on-disk files; the
+    // extension is preserved from oldName for files.
+    function applyRename(rawPath, oldName, isDir, newBaseName) {
+        try {
+            const trimmed = String(newBaseName).trim();
+            if (trimmed.length === 0)
+                return;
+
+            let ext = "";
+            if (!isDir) {
+                const lastDot = String(oldName).lastIndexOf(".");
+                if (lastDot > 0)
+                    ext = String(oldName).substring(lastDot);
+            }
+            const newName = trimmed + ext;
+            if (newName === String(oldName))
+                return;
+
+            let pathStr = String(rawPath);
+            if (pathStr.startsWith("stack://")) {
+                root.renameStack(pathStr.substring(8), trimmed);
+                return;
+            }
+
+            pathStr = root._cleanPath(pathStr);
+            if (!pathStr || pathStr.length === 0)
+                return;
+
+            const parts = pathStr.split("/");
+            parts.pop();
+            const newPath = parts.join("/") + "/" + newName;
+            Quickshell.execDetached(["mv", pathStr, newPath]);
+        } catch (e) {
+            ToastService.showToast(I18n.tr("Rename failed") + ": " + e.message, ToastService.levelError);
+        }
+    }
+
+    function armInlineRename(filePath) {
+        root._inlineRenameArmPath = filePath;
+        inlineRenameArmTimer.restart();
+    }
+
+    function isPathInFilteredModel(path) {
+        for (let i = 0; i < filteredModel.count; i++) {
+            if (filteredModel.get(i).filePath === path)
+                return true;
+        }
+        return false;
+    }
+
+    function beginInlineRename(filePath) {
+        inlineRenameArmTimer.stop();
+        // The item may have vanished during the arm delay (e.g. deleted by
+        // another process). Don't enter a rename that no delegate can ever
+        // dismiss, which would leave renamingFilePath stuck non-empty.
+        if (!isPathInFilteredModel(filePath))
+            return;
+        root.renamingFilePath = filePath;
+    }
+
+    function endInlineRename() {
+        inlineRenameArmTimer.stop();
+        // Clear on the next tick: this runs from inside the inline editor's own
+        // signal handler, so flipping renamingFilePath here would tear the
+        // editor down while it is still emitting.
+        Qt.callLater(() => {
+            root.renamingFilePath = "";
+        });
     }
 
     function dragMimeData(filePath) {
@@ -285,6 +362,9 @@ DesktopPluginComponent {
     }
 
     onSelectedFilePathsChanged: {
+        // A changed selection means any pending click-to-rename no longer
+        // targets the clicked item.
+        inlineRenameArmTimer.stop();
         if (selectedFilePaths.length > 0) {
             selectionClearTimer.restart();
         } else {
@@ -297,12 +377,20 @@ DesktopPluginComponent {
         interval: 5000 // 5 seconds of inactivity
         repeat: false
         onTriggered: {
-            if (!renameDialog.opened && !quickMenu.opened) {
+            if (!renameDialog.opened && !quickMenu.opened && root.renamingFilePath === "") {
                 clearSelection();
             } else {
                 selectionClearTimer.restart();
             }
         }
+    }
+
+    // Delays click-to-rename so a double-click (open) cancels it first.
+    Timer {
+        id: inlineRenameArmTimer
+        interval: 400 // ~ system double-click interval
+        repeat: false
+        onTriggered: root.beginInlineRename(root._inlineRenameArmPath)
     }
 
     ListModel {
@@ -561,6 +649,15 @@ DesktopPluginComponent {
         
         // 6. Unpinned Files
         unpinnedFiles.forEach(function(item) { filteredModel.append(item); });
+
+        // Release the inline-rename lock if the edited item is no longer present
+        // after this refresh (e.g. it was trashed/moved while being renamed),
+        // otherwise renamingFilePath stays stuck and selectionClearTimer never
+        // clears the selection again.
+        if (root.renamingFilePath !== "" && !isPathInFilteredModel(root.renamingFilePath)) {
+            inlineRenameArmTimer.stop();
+            root.renamingFilePath = "";
+        }
     }
 
     function createStack(stackName, filePaths) {
@@ -1210,6 +1307,7 @@ DesktopPluginComponent {
                         required property bool isStack
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
+                        readonly property bool editing: delegateRoot.filePath !== "" && root.renamingFilePath === delegateRoot.filePath && root.viewMode === "grid"
                         property bool isLaunching: false
 
                         Drag.dragType: Drag.Automatic
@@ -1220,7 +1318,7 @@ DesktopPluginComponent {
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
-                            enabled: !delegateRoot.isStack && !delegateRoot.filePath.startsWith("stack://")
+                            enabled: !delegateRoot.isStack && !delegateRoot.filePath.startsWith("stack://") && !delegateRoot.editing
                             onActiveChanged: {
                                 if (active) {
                                     delegateRoot.Drag.mimeData = root.dragMimeData(delegateRoot.filePath);
@@ -1294,7 +1392,9 @@ DesktopPluginComponent {
 
                                 // File/Folder Name
                                 StyledText {
+                                    id: gridNameLabel
                                     width: parent.width
+                                    visible: !delegateRoot.editing
                                     font.pixelSize: Theme.fontSizeSmall - 1
                                     text: root.smartTruncate(delegateRoot.isDesktop ? (delegateRoot.appName ? delegateRoot.appName : delegateRoot.fileName.slice(0, -8)) : delegateRoot.fileName, isSelected && root.selectedFilePaths.length === 1, width, font.pixelSize)
                                     color: Theme.surfaceText
@@ -1303,6 +1403,26 @@ DesktopPluginComponent {
                                     maximumLineCount: (isSelected && root.selectedFilePaths.length === 1) ? 10 : 2
                                     wrapMode: Text.WrapAnywhere
                                     opacity: itemHover.containsMouse ? 1.0 : 0.85
+                                }
+
+                                // Inline rename editor (replaces the label while editing)
+                                Loader {
+                                    width: parent.width
+                                    height: active && item ? item.implicitHeight : 0
+                                    active: delegateRoot.editing
+                                    visible: active
+                                    sourceComponent: Component {
+                                        FolderViewInlineRename {
+                                            fontPixelSize: Theme.fontSizeSmall - 1
+                                            targetName: delegateRoot.fileName
+                                            targetIsDir: delegateRoot.fileIsDir
+                                            onAccepted: newBaseName => {
+                                                root.applyRename(delegateRoot.filePath, delegateRoot.fileName, delegateRoot.fileIsDir, newBaseName);
+                                                root.endInlineRename();
+                                            }
+                                            onCanceled: root.endInlineRename()
+                                        }
+                                    }
                                 }
                             }
 
@@ -1321,6 +1441,7 @@ DesktopPluginComponent {
                             MouseArea {
                                 id: itemHover
                                 anchors.fill: parent
+                                enabled: !delegateRoot.editing
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -1337,9 +1458,19 @@ DesktopPluginComponent {
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
                                             root.selectRangeTo(delegateRoot.index);
                                         } else {
-                                            root.selectSingle(delegateRoot.filePath);
+                                            // Clicking the name label of an already-selected item starts
+                                            // an inline rename; a double-click opens instead (see below).
+                                            const lp = mapToItem(gridNameLabel, mouse.x, mouse.y);
+                                            const onLabel = gridNameLabel.visible && lp.x >= 0 && lp.x <= gridNameLabel.width && lp.y >= 0 && lp.y <= gridNameLabel.height;
+                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === delegateRoot.filePath;
+                                            if (wasSole && onLabel) {
+                                                root.armInlineRename(delegateRoot.filePath);
+                                            } else {
+                                                root.selectSingle(delegateRoot.filePath);
+                                            }
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (root.selectedFilePaths.indexOf(delegateRoot.filePath) === -1) {
                                             root.selectSingle(delegateRoot.filePath);
                                         }
@@ -1358,6 +1489,7 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (delegateRoot.filePath.startsWith("stack://")) {
                                             let stackId = delegateRoot.filePath.substring(8);
                                             root.toggleStackExpanded(stackId);
@@ -1430,6 +1562,7 @@ DesktopPluginComponent {
                         required property bool isStack
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
+                        readonly property bool editing: listDelegateRoot.filePath !== "" && root.renamingFilePath === listDelegateRoot.filePath && root.viewMode === "list"
                         property bool isLaunching: false
 
                         Drag.dragType: Drag.Automatic
@@ -1440,7 +1573,7 @@ DesktopPluginComponent {
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
-                            enabled: !listDelegateRoot.isStack && !listDelegateRoot.filePath.startsWith("stack://")
+                            enabled: !listDelegateRoot.isStack && !listDelegateRoot.filePath.startsWith("stack://") && !listDelegateRoot.editing
                             onActiveChanged: {
                                 if (active) {
                                     listDelegateRoot.Drag.mimeData = root.dragMimeData(listDelegateRoot.filePath);
@@ -1517,7 +1650,9 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
+                                    id: listNameLabel
                                     font.pixelSize: Theme.fontSizeSmall
+                                    visible: !listDelegateRoot.editing
                                     width: parent.width - Math.round(20 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 32 : 12)
                                     text: root.smartTruncate(listDelegateRoot.isDesktop ? (listDelegateRoot.appName ? listDelegateRoot.appName : listDelegateRoot.fileName.slice(0, -8)) : listDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
@@ -1525,6 +1660,27 @@ DesktopPluginComponent {
                                     elide: Text.ElideNone
                                     wrapMode: Text.WrapAnywhere
                                     maximumLineCount: 2
+                                }
+
+                                // Inline rename editor (replaces the label while editing)
+                                Loader {
+                                    active: listDelegateRoot.editing
+                                    visible: active
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - Math.round(20 * root.sizeScale) - (root.pinnedPaths.indexOf(listDelegateRoot.filePath) !== -1 ? 32 : 12)
+                                    height: active && item ? item.implicitHeight : 0
+                                    sourceComponent: Component {
+                                        FolderViewInlineRename {
+                                            fontPixelSize: Theme.fontSizeSmall
+                                            targetName: listDelegateRoot.fileName
+                                            targetIsDir: listDelegateRoot.fileIsDir
+                                            onAccepted: newBaseName => {
+                                                root.applyRename(listDelegateRoot.filePath, listDelegateRoot.fileName, listDelegateRoot.fileIsDir, newBaseName);
+                                                root.endInlineRename();
+                                            }
+                                            onCanceled: root.endInlineRename()
+                                        }
+                                    }
                                 }
                             }
 
@@ -1542,6 +1698,7 @@ DesktopPluginComponent {
                             MouseArea {
                                 id: listItemHover
                                 anchors.fill: parent
+                                enabled: !listDelegateRoot.editing
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -1558,9 +1715,19 @@ DesktopPluginComponent {
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
                                             root.selectRangeTo(listDelegateRoot.index);
                                         } else {
-                                            root.selectSingle(listDelegateRoot.filePath);
+                                            // Clicking the name label of an already-selected item starts
+                                            // an inline rename; a double-click opens instead (see below).
+                                            const lp = mapToItem(listNameLabel, mouse.x, mouse.y);
+                                            const onLabel = listNameLabel.visible && lp.x >= 0 && lp.x <= listNameLabel.width && lp.y >= 0 && lp.y <= listNameLabel.height;
+                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === listDelegateRoot.filePath;
+                                            if (wasSole && onLabel) {
+                                                root.armInlineRename(listDelegateRoot.filePath);
+                                            } else {
+                                                root.selectSingle(listDelegateRoot.filePath);
+                                            }
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (root.selectedFilePaths.indexOf(listDelegateRoot.filePath) === -1) {
                                             root.selectSingle(listDelegateRoot.filePath);
                                         }
@@ -1579,6 +1746,7 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (listDelegateRoot.filePath.startsWith("stack://")) {
                                             let stackId = listDelegateRoot.filePath.substring(8);
                                             root.toggleStackExpanded(stackId);
@@ -1652,6 +1820,7 @@ DesktopPluginComponent {
                         required property bool isStack
                         required property string belongingStackId
                         readonly property bool isSelected: root.selectedFilePaths.indexOf(filePath) !== -1
+                        readonly property bool editing: compactDelegateRoot.filePath !== "" && root.renamingFilePath === compactDelegateRoot.filePath && root.viewMode === "compact"
                         property bool isLaunching: false
 
                         Drag.dragType: Drag.Automatic
@@ -1662,7 +1831,7 @@ DesktopPluginComponent {
                             target: null
                             acceptedButtons: Qt.LeftButton
                             grabPermissions: PointerHandler.CanTakeOverFromItems | PointerHandler.ApprovesCancellation
-                            enabled: !compactDelegateRoot.isStack && !compactDelegateRoot.filePath.startsWith("stack://")
+                            enabled: !compactDelegateRoot.isStack && !compactDelegateRoot.filePath.startsWith("stack://") && !compactDelegateRoot.editing
                             onActiveChanged: {
                                 if (active) {
                                     compactDelegateRoot.Drag.mimeData = root.dragMimeData(compactDelegateRoot.filePath);
@@ -1739,7 +1908,9 @@ DesktopPluginComponent {
                                 }
 
                                 StyledText {
+                                    id: compactNameLabel
                                     font.pixelSize: Theme.fontSizeSmall - 1
+                                    visible: !compactDelegateRoot.editing
                                     width: parent.width - Math.round(16 * root.sizeScale) - (root.pinnedPaths.indexOf(filePath) !== -1 ? 28 : 12)
                                     text: root.smartTruncate(compactDelegateRoot.isDesktop ? (compactDelegateRoot.appName ? compactDelegateRoot.appName : compactDelegateRoot.fileName.slice(0, -8)) : compactDelegateRoot.fileName, false, width, font.pixelSize)
                                     color: Theme.surfaceText
@@ -1747,6 +1918,27 @@ DesktopPluginComponent {
                                     elide: Text.ElideNone
                                     wrapMode: Text.WrapAnywhere
                                     maximumLineCount: 2
+                                }
+
+                                // Inline rename editor (replaces the label while editing)
+                                Loader {
+                                    active: compactDelegateRoot.editing
+                                    visible: active
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - Math.round(16 * root.sizeScale) - (root.pinnedPaths.indexOf(compactDelegateRoot.filePath) !== -1 ? 28 : 12)
+                                    height: active && item ? item.implicitHeight : 0
+                                    sourceComponent: Component {
+                                        FolderViewInlineRename {
+                                            fontPixelSize: Theme.fontSizeSmall - 1
+                                            targetName: compactDelegateRoot.fileName
+                                            targetIsDir: compactDelegateRoot.fileIsDir
+                                            onAccepted: newBaseName => {
+                                                root.applyRename(compactDelegateRoot.filePath, compactDelegateRoot.fileName, compactDelegateRoot.fileIsDir, newBaseName);
+                                                root.endInlineRename();
+                                            }
+                                            onCanceled: root.endInlineRename()
+                                        }
+                                    }
                                 }
                             }
 
@@ -1764,6 +1956,7 @@ DesktopPluginComponent {
                             MouseArea {
                                 id: compactItemHover
                                 anchors.fill: parent
+                                enabled: !compactDelegateRoot.editing
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -1780,9 +1973,19 @@ DesktopPluginComponent {
                                         } else if (mouse.modifiers & Qt.ShiftModifier) {
                                             root.selectRangeTo(compactDelegateRoot.index);
                                         } else {
-                                            root.selectSingle(compactDelegateRoot.filePath);
+                                            // Clicking the name label of an already-selected item starts
+                                            // an inline rename; a double-click opens instead (see below).
+                                            const lp = mapToItem(compactNameLabel, mouse.x, mouse.y);
+                                            const onLabel = compactNameLabel.visible && lp.x >= 0 && lp.x <= compactNameLabel.width && lp.y >= 0 && lp.y <= compactNameLabel.height;
+                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === compactDelegateRoot.filePath;
+                                            if (wasSole && onLabel) {
+                                                root.armInlineRename(compactDelegateRoot.filePath);
+                                            } else {
+                                                root.selectSingle(compactDelegateRoot.filePath);
+                                            }
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (root.selectedFilePaths.indexOf(compactDelegateRoot.filePath) === -1) {
                                             root.selectSingle(compactDelegateRoot.filePath);
                                         }
@@ -1801,6 +2004,7 @@ DesktopPluginComponent {
 
                                 onDoubleClicked: mouse => {
                                     if (mouse.button === Qt.LeftButton) {
+                                        inlineRenameArmTimer.stop();
                                         if (compactDelegateRoot.filePath.startsWith("stack://")) {
                                             let stackId = compactDelegateRoot.filePath.substring(8);
                                             root.toggleStackExpanded(stackId);

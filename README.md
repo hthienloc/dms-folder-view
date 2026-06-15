@@ -35,6 +35,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 | **Left Click Sort Icon** | Open sorting options dropdown (Name, Date, Size, Type) |
 | **Left Click Search Icon** | Expand/collapse search input to filter files instantly by name |
 | **Left Click File/Folder** | Select individual item |
+| **Left Click Label of Selected Item** | Rename the item in place (inline) |
 | **Ctrl + Left Click** | Toggle selection on multiple items |
 | **Shift + Left Click** | Select range of items |
 | **Double Click Item** | Open folder or run file with system default application |

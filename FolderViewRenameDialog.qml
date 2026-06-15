@@ -1,9 +1,7 @@
 import QtQuick
 import QtQuick.Controls
-import Quickshell
 import qs.Common
 import qs.Widgets
-import qs.Services
 import "./dms-common"
 
 Popup {
@@ -137,49 +135,8 @@ Popup {
     }
 
     function performRename() {
-        try {
-            if (!renameDialog.inputField) {
-                renameDialog.close();
-                return;
-            }
-
-            const newBaseName = renameDialog.inputField.text.trim();
-            const newName = newBaseName + renameDialog.fileExt;
-
-            if (newName.length === 0 || newName === renameDialog.oldName) {
-                renameDialog.close();
-                return;
-            }
-
-            let pathStr = String(renameDialog.filePath);
-            if (pathStr.startsWith("stack://")) {
-                let stackId = pathStr.substring(8);
-                if (typeof parent.renameStack === "function") {
-                    parent.renameStack(stackId, newBaseName);
-                }
-                renameDialog.close();
-                return;
-            }
-
-            if (pathStr.startsWith("file://")) {
-                pathStr = pathStr.substring(7);
-            }
-            if (pathStr.startsWith("localhost/")) {
-                pathStr = pathStr.substring(9);
-            }
-            if (!pathStr || pathStr.length === 0) {
-                renameDialog.close();
-                return;
-            }
-
-            const parts = pathStr.split("/");
-            parts.pop();
-            const dirPath = parts.join("/");
-            const newPath = dirPath + "/" + newName;
-
-            Quickshell.execDetached(["mv", pathStr, newPath]);
-        } catch (e) {
-            ToastService.showToast(I18n.tr("Rename failed") + ": " + e.message, ToastService.levelError);
+        if (renameDialog.inputField && parent && typeof parent.applyRename === "function") {
+            parent.applyRename(renameDialog.filePath, renameDialog.oldName, renameDialog.isDir, renameDialog.inputField.text);
         }
         renameDialog.close();
     }
