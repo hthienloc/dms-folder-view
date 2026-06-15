@@ -212,6 +212,13 @@ DesktopPluginComponent {
             if (trimmed.length === 0)
                 return;
 
+            // A slash would turn the rename into a move into another directory
+            // (or an invalid path), so reject it.
+            if (trimmed.indexOf("/") !== -1) {
+                ToastService.showToast(I18n.tr("Rename failed") + ": " + I18n.tr("Name cannot contain slashes"), ToastService.levelError);
+                return;
+            }
+
             let ext = "";
             if (!isDir) {
                 const lastDot = String(oldName).lastIndexOf(".");
@@ -244,6 +251,20 @@ DesktopPluginComponent {
     function armInlineRename(filePath) {
         root._inlineRenameArmPath = filePath;
         inlineRenameArmTimer.restart();
+    }
+
+    // Shared by all three view delegates: a left click on the name label of an
+    // item that is already the sole selection arms an inline rename; any other
+    // left click just (re)selects the item.
+    function handleItemLabelClick(mouseArea, labelItem, mouseX, mouseY, filePath) {
+        const lp = mouseArea.mapToItem(labelItem, mouseX, mouseY);
+        const onLabel = labelItem.visible && lp.x >= 0 && lp.x <= labelItem.width && lp.y >= 0 && lp.y <= labelItem.height;
+        const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === filePath;
+        if (wasSole && onLabel) {
+            root.armInlineRename(filePath);
+        } else {
+            root.selectSingle(filePath);
+        }
     }
 
     function isPathInFilteredModel(path) {
@@ -1460,14 +1481,7 @@ DesktopPluginComponent {
                                         } else {
                                             // Clicking the name label of an already-selected item starts
                                             // an inline rename; a double-click opens instead (see below).
-                                            const lp = mapToItem(gridNameLabel, mouse.x, mouse.y);
-                                            const onLabel = gridNameLabel.visible && lp.x >= 0 && lp.x <= gridNameLabel.width && lp.y >= 0 && lp.y <= gridNameLabel.height;
-                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === delegateRoot.filePath;
-                                            if (wasSole && onLabel) {
-                                                root.armInlineRename(delegateRoot.filePath);
-                                            } else {
-                                                root.selectSingle(delegateRoot.filePath);
-                                            }
+                                            root.handleItemLabelClick(itemHover, gridNameLabel, mouse.x, mouse.y, delegateRoot.filePath);
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
                                         inlineRenameArmTimer.stop();
@@ -1717,14 +1731,7 @@ DesktopPluginComponent {
                                         } else {
                                             // Clicking the name label of an already-selected item starts
                                             // an inline rename; a double-click opens instead (see below).
-                                            const lp = mapToItem(listNameLabel, mouse.x, mouse.y);
-                                            const onLabel = listNameLabel.visible && lp.x >= 0 && lp.x <= listNameLabel.width && lp.y >= 0 && lp.y <= listNameLabel.height;
-                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === listDelegateRoot.filePath;
-                                            if (wasSole && onLabel) {
-                                                root.armInlineRename(listDelegateRoot.filePath);
-                                            } else {
-                                                root.selectSingle(listDelegateRoot.filePath);
-                                            }
+                                            root.handleItemLabelClick(listItemHover, listNameLabel, mouse.x, mouse.y, listDelegateRoot.filePath);
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
                                         inlineRenameArmTimer.stop();
@@ -1975,14 +1982,7 @@ DesktopPluginComponent {
                                         } else {
                                             // Clicking the name label of an already-selected item starts
                                             // an inline rename; a double-click opens instead (see below).
-                                            const lp = mapToItem(compactNameLabel, mouse.x, mouse.y);
-                                            const onLabel = compactNameLabel.visible && lp.x >= 0 && lp.x <= compactNameLabel.width && lp.y >= 0 && lp.y <= compactNameLabel.height;
-                                            const wasSole = root.selectedFilePaths.length === 1 && root.selectedFilePaths[0] === compactDelegateRoot.filePath;
-                                            if (wasSole && onLabel) {
-                                                root.armInlineRename(compactDelegateRoot.filePath);
-                                            } else {
-                                                root.selectSingle(compactDelegateRoot.filePath);
-                                            }
+                                            root.handleItemLabelClick(compactItemHover, compactNameLabel, mouse.x, mouse.y, compactDelegateRoot.filePath);
                                         }
                                     } else if (mouse.button === Qt.MiddleButton) {
                                         inlineRenameArmTimer.stop();

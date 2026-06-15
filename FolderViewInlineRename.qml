@@ -67,6 +67,10 @@ FocusScope {
 
     Component.onCompleted: {
         Qt.callLater(() => {
+            // The editor can be torn down within the same tick (e.g. the item
+            // is removed from the model), so the deferred field may be gone.
+            if (!field)
+                return;
             field.text = editor._baseName();
             field.forceActiveFocus();
             field.selectAll();
