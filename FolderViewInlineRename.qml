@@ -53,6 +53,11 @@ FocusScope {
         editor.cancel();
     }
 
+    Keys.onLeftPressed: event => event.accepted = true
+    Keys.onRightPressed: event => event.accepted = true
+    Keys.onUpPressed: event => event.accepted = true
+    Keys.onDownPressed: event => event.accepted = true
+
     DankTextField {
         id: field
 
