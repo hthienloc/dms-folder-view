@@ -2540,7 +2540,7 @@ DesktopPluginComponent {
                         height: 28
                         radius: Theme.cornerRadius - 2
                         readonly property bool isActive: root.currentFolderPath() === modelData
-                        color: favItemArea.containsMouse
+                        color: (favItemArea.containsMouse || favRemoveArea.containsMouse)
                             ? Theme.withAlpha(Theme.primary, 0.15)
                             : "transparent"
 
