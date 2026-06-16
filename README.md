@@ -30,7 +30,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 
 | Input Action | Result |
 |---|---|
-| **Left Click Folder Title** | Open directory selection dropdown (Desktop, Downloads, Trash, Home, Custom, etc.) |
+| **Left Click Folder Title** | Open directory selection dropdown (Desktop, Downloads, Trash, Home, Custom, etc.), including a Favorites section and an option to add/remove the current folder |
 | **Left Click `+` Icon** | Open creation dropdown (New Folder, New Document) |
 | **Left Click Sort Icon** | Open sorting options dropdown (Name, Date, Size, Type) |
 | **Left Click Search Icon** | Expand/collapse search input to filter files instantly by name |
@@ -39,7 +39,7 @@ git clone https://github.com/hthienloc/dms-folder-view ~/.config/DankMaterialShe
 | **Ctrl + Left Click** | Toggle selection on multiple items |
 | **Shift + Left Click** | Select range of items |
 | **Double Click Item** | Open folder or run file with system default application |
-| **Middle Click Item** | Open context menu (Open, Float File, Copy, Copy Path, Rename, Trash) |
+| **Middle Click Item** | Open context menu (Open, Float File, Copy, Copy Path, Rename, Add to Favorites for folders, Trash) |
 | **Left Click Empty Space** | Clear current selection |
 | **Middle Click Empty Space** | Paste files, folders, or clipboard screenshots into active folder |
 

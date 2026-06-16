@@ -38,6 +38,10 @@ DesktopPluginComponent {
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
     onPinnedPathsChanged: updateFilteredModel()
 
+    // Favorite directories (absolute paths) shown as a dedicated section in the
+    // folder switcher for quick access.
+    readonly property var favoriteFolders: pluginData.favoriteFolders ?? []
+
     property var stacks: pluginData.stacks ?? []
     onStacksChanged: updateFilteredModel()
     property var expandedStackIds: []
@@ -360,6 +364,77 @@ DesktopPluginComponent {
             pins.push(filePath);
         }
         pluginService.savePluginData(pluginId, "pinnedPaths", pins);
+    }
+
+    // --- Favorite folders ---
+
+    // Absolute path of the folder currently shown (keeps URL encoding so it
+    // round-trips through customFolderPath / targetFolderUrl).
+    function currentFolderPath() {
+        return root._cleanPath(root.targetFolderUrl);
+    }
+
+    function isFavorite(path) {
+        return root.favoriteFolders.indexOf(path) !== -1;
+    }
+
+    function toggleFavorite(path) {
+        if (!pluginService || !path) return;
+        let favs = root.favoriteFolders.slice();
+        let index = favs.indexOf(path);
+        if (index !== -1) {
+            favs.splice(index, 1);
+        } else {
+            favs.push(path);
+        }
+        pluginService.savePluginData(pluginId, "favoriteFolders", favs);
+    }
+
+    // Map an absolute path back to a predefined folderType when it matches a
+    // known system location, so switching to a favorited system folder keeps
+    // that folder's identity (correct dropdown highlight and title) instead of
+    // always reading as "Custom".
+    function _folderTypeForPath(path) {
+        const sp = Platform.StandardPaths;
+        const known = {
+            "home": sp.HomeLocation,
+            "desktop": sp.DesktopLocation,
+            "downloads": sp.DownloadLocation,
+            "music": sp.MusicLocation,
+            "pictures": sp.PicturesLocation,
+            "videos": sp.MoviesLocation,
+            "documents": sp.DocumentsLocation
+        };
+        for (const type in known) {
+            if (root._cleanPath(sp.writableLocation(known[type]).toString()) === path)
+                return type;
+        }
+        return "";
+    }
+
+    // Switch the widget to a favorite directory. System folders keep their
+    // predefined type; everything else uses the custom-path mechanism.
+    function openFavorite(path) {
+        if (!pluginService) return;
+        const preset = root._folderTypeForPath(path);
+        if (preset) {
+            pluginService.savePluginData(pluginId, "folderType", preset);
+        } else {
+            pluginService.savePluginData(pluginId, "customFolderPath", path);
+            pluginService.savePluginData(pluginId, "folderType", "custom");
+        }
+    }
+
+    // Human-readable label for a favorite: the (decoded) last path segment.
+    function favoriteName(path) {
+        let p = String(path).replace(/\/+$/, "");
+        let parts = p.split("/");
+        let last = parts[parts.length - 1] || String(path);
+        try {
+            return decodeURIComponent(last);
+        } catch (e) {
+            return last;
+        }
     }
 
     function pasteFromClipboard() {
@@ -1013,7 +1088,8 @@ DesktopPluginComponent {
                                 const path = root.selectedFilePaths[0];
                                 quickMenu.currentPath = path;
                                 quickMenu.currentName = path.split('/').pop();
-                                
+                                quickMenu.currentIsDir = false;
+
                                 for (let i = 0; i < filteredModel.count; i++) {
                                     if (filteredModel.get(i).filePath === path) {
                                         quickMenu.currentIsDir = filteredModel.get(i).fileIsDir;
@@ -2261,6 +2337,15 @@ DesktopPluginComponent {
                             }
                         },
                         {
+                            actionName: "favorite",
+                            icon: "star",
+                            visible: root.selectedFilePaths.length <= 1 && quickMenu.currentIsDir && !quickMenu.currentPath.startsWith("stack://"),
+                            action: function() {
+                                quickMenu.close();
+                                root.toggleFavorite(root._cleanPath(quickMenu.currentPath));
+                            }
+                        },
+                        {
                             actionName: "pin",
                             visible: true,
                             action: function() {
@@ -2337,6 +2422,7 @@ DesktopPluginComponent {
                                     ? "push_pin"
                                     : (modelData.icon || "")
                                 size: 14
+                                filled: modelData.actionName === "favorite" && root.isFavorite(root._cleanPath(quickMenu.currentPath))
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: !isSeparator && parent.parent.itemVisible
@@ -2345,7 +2431,9 @@ DesktopPluginComponent {
                             StyledText {
                                 text: modelData.actionName === "pin"
                                     ? (root.pinnedPaths.indexOf(quickMenu.currentPath) !== -1 ? I18n.tr("Unpin from Top") : I18n.tr("Pin to Top"))
-                                    : (modelData.text || "")
+                                    : modelData.actionName === "favorite"
+                                        ? (root.isFavorite(root._cleanPath(quickMenu.currentPath)) ? I18n.tr("Remove from Favorites") : I18n.tr("Add to Favorites"))
+                                        : (modelData.text || "")
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: modelData.dangerous && menuArea.containsMouse ? Theme.error : Theme.surfaceText
                                 anchors.verticalCenter: parent.verticalCenter
@@ -2404,7 +2492,7 @@ DesktopPluginComponent {
     Popup {
         id: folderDropdown
         parent: folderSelectorBtn
-        width: 140
+        width: 190
         height: folderDropdownColumn.implicitHeight + Theme.spacingS * 2
         padding: 0
         modal: true
@@ -2428,6 +2516,106 @@ DesktopPluginComponent {
                 anchors.fill: parent
                 anchors.margins: Theme.spacingS
                 spacing: 2
+
+                // --- Favorites section ---
+                StyledText {
+                    width: parent.width
+                    visible: root.favoriteFolders.length > 0
+                    text: I18n.tr("Favorites")
+                    font.pixelSize: Theme.fontSizeSmall - 1
+                    font.bold: true
+                    color: Theme.surfaceVariantText
+                    elide: Text.ElideRight
+                    leftPadding: Theme.spacingS
+                    topPadding: 2
+                    bottomPadding: 2
+                }
+
+                Repeater {
+                    model: root.favoriteFolders
+
+                    delegate: Rectangle {
+                        id: favItem
+                        width: parent.width
+                        height: 28
+                        radius: Theme.cornerRadius - 2
+                        readonly property bool isActive: root.currentFolderPath() === modelData
+                        color: favItemArea.containsMouse
+                            ? Theme.withAlpha(Theme.primary, 0.15)
+                            : "transparent"
+
+                        DankIcon {
+                            id: favIcon
+                            name: "star"
+                            filled: true
+                            size: 14
+                            color: favItem.isActive ? Theme.primary : Theme.surfaceText
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        StyledText {
+                            anchors.left: favIcon.right
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.right: parent.right
+                            anchors.rightMargin: 24
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.favoriteName(modelData)
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.bold: favItem.isActive
+                            color: favItem.isActive ? Theme.primary : Theme.surfaceText
+                            elide: Text.ElideRight
+                        }
+
+                        MouseArea {
+                            id: favItemArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                folderDropdown.close();
+                                root.openFavorite(modelData);
+                            }
+                        }
+
+                        // Remove (unfavorite) button — declared after favItemArea
+                        // so it sits on top and consumes its own clicks.
+                        Rectangle {
+                            id: favRemoveBtn
+                            width: 18
+                            height: 18
+                            radius: 9
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.spacingXS
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: favItemArea.containsMouse || favRemoveArea.containsMouse
+                            color: favRemoveArea.containsMouse ? Theme.withAlpha(Theme.error, 0.2) : "transparent"
+
+                            DankIcon {
+                                anchors.centerIn: parent
+                                name: "close"
+                                size: 12
+                                color: favRemoveArea.containsMouse ? Theme.error : Theme.surfaceVariantText
+                            }
+
+                            MouseArea {
+                                id: favRemoveArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleFavorite(modelData)
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    visible: root.favoriteFolders.length > 0
+                    color: Theme.withAlpha(Theme.outline, 0.15)
+                }
 
                 Repeater {
                     model: [
@@ -2491,6 +2679,53 @@ DesktopPluginComponent {
                                 }
                             }
                         }
+                    }
+                }
+
+                // --- Add/remove the current folder as a favorite ---
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: Theme.withAlpha(Theme.outline, 0.15)
+                }
+
+                Rectangle {
+                    id: favToggleRow
+                    width: parent.width
+                    height: 28
+                    radius: Theme.cornerRadius - 2
+                    readonly property bool currentIsFav: root.isFavorite(root.currentFolderPath())
+                    color: favToggleArea.containsMouse ? Theme.withAlpha(Theme.primary, 0.15) : "transparent"
+
+                    DankIcon {
+                        id: favToggleIcon
+                        name: "star"
+                        filled: favToggleRow.currentIsFav
+                        size: 14
+                        color: favToggleRow.currentIsFav ? Theme.primary : Theme.surfaceText
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.spacingS
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    StyledText {
+                        anchors.left: favToggleIcon.right
+                        anchors.leftMargin: Theme.spacingS
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.spacingS
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: favToggleRow.currentIsFav ? I18n.tr("Remove from Favorites") : I18n.tr("Add to Favorites")
+                        font.pixelSize: Theme.fontSizeSmall
+                        color: favToggleRow.currentIsFav ? Theme.primary : Theme.surfaceText
+                        elide: Text.ElideRight
+                    }
+
+                    MouseArea {
+                        id: favToggleArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.toggleFavorite(root.currentFolderPath())
                     }
                 }
             }

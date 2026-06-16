@@ -1,4 +1,5 @@
 {
+  "Add to Favorites": "Add to Favorites",
   "Adjust the size of file and folder icons.": "Adjust the size of file and folder icons.",
   "Appearance": "Appearance",
   "Background Opacity": "Background Opacity",
@@ -22,6 +23,7 @@
   "Downloads": "Downloads",
   "Drop to copy here": "Drop to copy here",
   "Enter new name...": "Enter new name...",
+  "Favorites": "Favorites",
   "File Copied": "File Copied",
   "File name...": "File name...",
   "Folder": "Folder",
@@ -50,6 +52,7 @@
   "Path copied to clipboard": "Path copied to clipboard",
   "Permissions:": "Permissions:",
   "Pin to Top": "Pin to Top",
+  "Remove from Favorites": "Remove from Favorites",
   "Rename": "Rename",
   "Search...": "Search...",
   "Select Folder": "Select Folder",
