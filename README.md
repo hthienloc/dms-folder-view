@@ -63,7 +63,7 @@ GPL-3.0
 
 - [x] **Drag & Drop (Out):** Drag files directly from the widget into external windows.
 - [x] **Drag & Drop (In):** Support dropping files from external windows into the widget.
-- [ ] **Inline Rename:** Quick renaming by clicking the label of a selected item.
+- [x] **Inline Rename:** Quick renaming by clicking the label of a selected item.
 - [ ] **Favorite Folders:** Dedicated section for pinned/favorite directories for quicker access.
 - [ ] **Customizable Context Menu:** Allow users to add, remove, or reorder actions in the middle-click menu.
 - [x] **Multi-file operations:** Select multiple items using Ctrl/Shift and perform bulk copies, moves, or trashing.
