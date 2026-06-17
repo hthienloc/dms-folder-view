@@ -412,6 +412,23 @@ DesktopPluginComponent {
         return "";
     }
 
+    function _pathForFolderType(type) {
+        const sp = Platform.StandardPaths;
+        const known = {
+            "home": sp.HomeLocation,
+            "desktop": sp.DesktopLocation,
+            "downloads": sp.DownloadLocation,
+            "music": sp.MusicLocation,
+            "pictures": sp.PicturesLocation,
+            "videos": sp.MoviesLocation,
+            "documents": sp.DocumentsLocation
+        };
+        if (known[type] !== undefined) {
+            return root._cleanPath(sp.writableLocation(known[type]).toString());
+        }
+        return "";
+    }
+
     // Switch the widget to a favorite directory. System folders keep their
     // predefined type; everything else uses the custom-path mechanism.
     function openFavorite(path) {
@@ -2618,17 +2635,24 @@ DesktopPluginComponent {
                 }
 
                 Repeater {
-                    model: [
-                        { label: I18n.tr("Home"), value: "home", icon: "home" },
-                        { label: I18n.tr("Desktop"), value: "desktop", icon: "desktop_mac" },
-                        { label: I18n.tr("Downloads"), value: "downloads", icon: "download" },
-                        { label: I18n.tr("Music"), value: "music", icon: "music_note" },
-                        { label: I18n.tr("Pictures"), value: "pictures", icon: "image" },
-                        { label: I18n.tr("Videos"), value: "videos", icon: "movie" },
-                        { label: I18n.tr("Documents"), value: "documents", icon: "description" },
-                        { label: I18n.tr("Trash"), value: "trash", icon: "delete" },
-                        { label: I18n.tr("Custom..."), value: "custom", icon: "folder" }
-                    ]
+                    model: {
+                        let presets = [
+                            { label: I18n.tr("Home"), value: "home", icon: "home" },
+                            { label: I18n.tr("Desktop"), value: "desktop", icon: "desktop_mac" },
+                            { label: I18n.tr("Downloads"), value: "downloads", icon: "download" },
+                            { label: I18n.tr("Music"), value: "music", icon: "music_note" },
+                            { label: I18n.tr("Pictures"), value: "pictures", icon: "image" },
+                            { label: I18n.tr("Videos"), value: "videos", icon: "movie" },
+                            { label: I18n.tr("Documents"), value: "documents", icon: "description" },
+                            { label: I18n.tr("Trash"), value: "trash", icon: "delete" },
+                            { label: I18n.tr("Custom..."), value: "custom", icon: "folder" }
+                        ];
+                        return presets.filter(p => {
+                            if (p.value === "custom" || p.value === "trash") return true;
+                            let path = root._pathForFolderType(p.value);
+                            return !root.isFavorite(path);
+                        });
+                    }
 
                     delegate: Rectangle {
                         width: parent.width
