@@ -15,12 +15,13 @@ PluginSettings {
         SectionTitle { 
             text: I18n.tr("Appearance")
             icon: "palette" 
-            showReset: backgroundOpacity.isDirty || borderOpacity.isDirty || cellSize.isDirty || viewMode.isDirty || headerPosition.isDirty || showHeader.isDirty || showHidden.isDirty
+            showReset: backgroundOpacity.isDirty || borderOpacity.isDirty || cellSize.isDirty || viewMode.isDirty || gridDirection.isDirty || headerPosition.isDirty || showHeader.isDirty || showHidden.isDirty
             onResetClicked: {
                 backgroundOpacity.resetToDefault();
                 borderOpacity.resetToDefault();
                 cellSize.resetToDefault();
                 viewMode.resetToDefault();
+                gridDirection.resetToDefault();
                 headerPosition.resetToDefault();
                 showHeader.resetToDefault();
                 showHidden.resetToDefault();
@@ -86,7 +87,7 @@ PluginSettings {
             id: gridDirection
             settingKey: "gridDirection"
             label: I18n.tr("Grid View Direction")
-            visible: viewMode.value == "grid"
+            visible: viewMode.value === "grid"
             options: [
                 { label: I18n.tr("Horizontal"), value: "horizontal" },
                 { label: I18n.tr("Vertical"), value: "vertical" }

@@ -33,7 +33,7 @@ DesktopPluginComponent {
     readonly property double sizeScale: cellSize / 84.0
     readonly property string sortBy: pluginData.sortBy ?? "name"
     readonly property string viewMode: pluginData.viewMode ?? "grid"
-    readonly property string gridDirection : pluginData.gridDirection ?? "horizontal"
+    readonly property string gridDirection: pluginData.gridDirection ?? "horizontal"
     readonly property string headerPosition: pluginData.headerPosition ?? "top"
     readonly property bool showHeader: pluginData.showHeader ?? true
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
@@ -49,7 +49,7 @@ DesktopPluginComponent {
 
     readonly property bool isScrolledDown: {
         if (viewMode === "grid") {
-            return (typeof fileGrid !== "undefined" && fileGrid) ? fileGrid.contentY > 50 : false;
+            return (typeof fileGrid !== "undefined" && fileGrid) ? (gridDirection === "horizontal") ? fileGrid.contentY > 50 : fileGrid.contentX > 50 : false;
         }
         if (viewMode === "list") {
             return (typeof fileList !== "undefined" && fileList) ? fileList.contentY > 50 : false;
@@ -847,7 +847,11 @@ DesktopPluginComponent {
 
     function scrollToTop() {
         if (viewMode === "grid" && typeof fileGrid !== "undefined" && fileGrid) {
-            fileGrid.contentY = 0;
+            if (gridDirection === "horizontal") {
+                fileGrid.contentY = 0;
+            } else if (gridDirection === "vertical") {
+                fileGrid.contentX = 0;
+            }
         } else if (viewMode === "list" && typeof fileList !== "undefined" && fileList) {
             fileList.contentY = 0;
         } else if (viewMode === "compact" && typeof fileCompact !== "undefined" && fileCompact) {
@@ -1381,7 +1385,7 @@ DesktopPluginComponent {
                     model: filteredModel
                     visible: root.viewMode === "grid"
                     boundsBehavior: Flickable.StopAtBounds
-                    flow: (root.gridDirection == "horizontal") ? GridView.FlowLeftToRight : GridView.FlowTopToBottom
+                    flow: (root.gridDirection === "horizontal") ? GridView.FlowLeftToRight : GridView.FlowTopToBottom
 
                     MouseArea {
                         id: fileGridBackground
