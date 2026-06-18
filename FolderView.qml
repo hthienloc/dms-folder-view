@@ -33,6 +33,7 @@ DesktopPluginComponent {
     readonly property double sizeScale: cellSize / 84.0
     readonly property string sortBy: pluginData.sortBy ?? "name"
     readonly property string viewMode: pluginData.viewMode ?? "grid"
+    readonly property string gridDirection : pluginData.gridDirection ?? "horizontal"
     readonly property string headerPosition: pluginData.headerPosition ?? "top"
     readonly property bool showHeader: pluginData.showHeader ?? true
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
@@ -1380,6 +1381,7 @@ DesktopPluginComponent {
                     model: filteredModel
                     visible: root.viewMode === "grid"
                     boundsBehavior: Flickable.StopAtBounds
+                    flow: (root.gridDirection == "horizontal") ? GridView.FlowLeftToRight : GridView.FlowTopToBottom
 
                     MouseArea {
                         id: fileGridBackground

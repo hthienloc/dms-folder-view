@@ -82,6 +82,18 @@ PluginSettings {
             defaultValue: "grid"
         }
 
+        ButtonGroupSettingPlus {
+            id: gridDirection
+            settingKey: "gridDirection"
+            label: I18n.tr("Grid View Direction")
+            visible: viewMode.value == "grid"
+            options: [
+                { label: I18n.tr("Horizontal"), value: "horizontal" },
+                { label: I18n.tr("Vertical"), value: "vertical" }
+            ]
+            defaultValue: "horizontal"
+        }
+
         Separator {}
 
         ButtonGroupSettingPlus {
