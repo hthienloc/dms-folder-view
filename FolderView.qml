@@ -1387,6 +1387,15 @@ DesktopPluginComponent {
                     boundsBehavior: Flickable.StopAtBounds
                     flow: (root.gridDirection === "horizontal") ? GridView.FlowLeftToRight : GridView.FlowTopToBottom
 
+                    WheelHandler {
+                        orientation: Qt.Vertical
+                        onWheel: (event) => {
+                            if (root.gridDirection === "vertical" && fileGrid.contentWidth > fileGrid.width) {
+                                fileGrid.contentX = Math.max(0, Math.min(fileGrid.contentX - event.angleDelta.y, fileGrid.contentWidth - fileGrid.width));
+                            }
+                        }
+                    }
+
                     MouseArea {
                         id: fileGridBackground
                         z: -1
