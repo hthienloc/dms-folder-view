@@ -1387,15 +1387,6 @@ DesktopPluginComponent {
                     boundsBehavior: Flickable.StopAtBounds
                     flow: (root.gridDirection === "horizontal") ? GridView.FlowLeftToRight : GridView.FlowTopToBottom
 
-                    WheelHandler {
-                        orientation: Qt.Vertical
-                        onWheel: (event) => {
-                            if (root.gridDirection === "vertical" && fileGrid.contentWidth > fileGrid.width) {
-                                fileGrid.contentX = Math.max(0, Math.min(fileGrid.contentX - event.angleDelta.y, fileGrid.contentWidth - fileGrid.width));
-                            }
-                        }
-                    }
-
                     MouseArea {
                         id: fileGridBackground
                         z: -1
@@ -2218,6 +2209,20 @@ DesktopPluginComponent {
                                 color: Theme.primary
                                 anchors.horizontalCenter: parent.horizontalCenter
                             }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton
+                    onWheel: wheel => {
+                        var gv = root.viewMode === "grid" ? fileGrid : (root.viewMode === "compact" ? fileCompact : null);
+                        if (!gv) return;
+                        if (gv.contentWidth > gv.width) {
+                            gv.contentX = Math.max(0, Math.min(gv.contentX - wheel.angleDelta.y, gv.contentWidth - gv.width));
+                        } else {
+                            gv.contentY = Math.max(0, Math.min(gv.contentY - wheel.angleDelta.y, Math.max(0, gv.contentHeight - gv.height)));
                         }
                     }
                 }
