@@ -64,7 +64,7 @@ GPL-3.0
 - [x] **Drag & Drop (Out):** Drag files directly from the widget into external windows.
 - [x] **Drag & Drop (In):** Support dropping files from external windows into the widget.
 - [x] **Inline Rename:** Quick renaming by clicking the label of a selected item.
-- [ ] **Favorite Folders:** Dedicated section for pinned/favorite directories for quicker access.
+- [x] **Favorite Folders:** Dedicated section for pinned/favorite directories for quicker access.
 - [ ] **Customizable Context Menu:** Allow users to add, remove, or reorder actions in the middle-click menu.
 - [x] **Multi-file operations:** Select multiple items using Ctrl/Shift and perform bulk copies, moves, or trashing.
 - [x] **File Search:** Add a small integrated search field in the header to filter large directories instantly.
@@ -73,5 +73,5 @@ GPL-3.0
 - [x] **Folder Status:** Display item counts and selection status in the header.
 - [x] **Image & Audio Thumbnails:** Show image previews and album art for music files.
 - [x] **PDF Thumbnails:** Show first page preview for PDF documents.
-- [ ] **Terminal Integration:** "Open in Terminal" or "Open in VS Code" shortcuts for the active directory.
+- [x] **Terminal Integration:** "Open in Terminal" or "Open in VS Code" shortcuts for the active directory.
 - [ ] **Archive Support:** Basic management (view/extract) for compressed files (.zip, .tar.gz).

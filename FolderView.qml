@@ -1099,7 +1099,19 @@ DesktopPluginComponent {
                                 quickMenu.close();
                                 return;
                             }
-                            if (root.selectedFilePaths.length === 0) return;
+                            if (activeDirMenu.visible) {
+                                activeDirMenu.close();
+                                return;
+                            }
+
+                            if (root.selectedFilePaths.length === 0) {
+                                const globalPos = mapToItem(root, mouse.x, mouse.y);
+                                activeDirMenu.parent = root;
+                                activeDirMenu.x = Math.max(0, Math.min(root.width - activeDirMenu.width, globalPos.x));
+                                activeDirMenu.y = Math.max(0, Math.min(root.height - activeDirMenu.height, globalPos.y));
+                                activeDirMenu.open();
+                                return;
+                            }
 
                             const globalPos = mapToItem(root, mouse.x, mouse.y);
                             quickMenu.parent = root;
@@ -2240,6 +2252,126 @@ DesktopPluginComponent {
     onWidgetHeightChanged: {
         if (pluginService && widgetHeight !== pluginData.widgetHeight) {
             pluginService.savePluginData(pluginId, "widgetHeight", widgetHeight);
+        }
+    }
+
+    // Active Directory Context Menu
+    Popup {
+        id: activeDirMenu
+        width: 180
+        height: dirMenuColumn.implicitHeight + Theme.spacingS * 2
+        padding: 0
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "transparent"
+        }
+
+        contentItem: Rectangle {
+            color: Theme.surfaceContainer
+            radius: Theme.cornerRadius
+            border.color: Theme.withAlpha(Theme.outline, 0.15)
+            border.width: 1
+
+            Column {
+                id: dirMenuColumn
+                anchors.fill: parent
+                anchors.margins: Theme.spacingS
+                spacing: 2
+
+                Repeater {
+                    model: [
+                        {
+                            text: I18n.tr("Open in Terminal"),
+                            icon: "terminal",
+                            action: function() {
+                                activeDirMenu.close();
+                                const path = root.currentFolderPath();
+                                const term = SessionData.resolveTerminal() || "xterm";
+                                Quickshell.execDetached(["bash", "-c", "cd \"$1\" && exec \"$2\"", "launch_terminal", path, term]);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Open in VS Code"),
+                            icon: "code",
+                            action: function() {
+                                activeDirMenu.close();
+                                const path = root.currentFolderPath();
+                                Quickshell.execDetached(["code", path]);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Open in File Manager"),
+                            icon: "folder_open",
+                            action: function() {
+                                activeDirMenu.close();
+                                const path = root.currentFolderPath();
+                                Quickshell.execDetached(["gio", "open", path]);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Copy Folder Path"),
+                            icon: "content_copy",
+                            action: function() {
+                                activeDirMenu.close();
+                                const path = root.currentFolderPath();
+                                Quickshell.execDetached(["dms", "cl", "copy", path]);
+                                ToastService.showToast(I18n.tr("Copied to Clipboard") + ": " + path, ToastService.levelInfo);
+                            }
+                        },
+                        {
+                            text: I18n.tr("Folder Info"),
+                            icon: "info",
+                            action: function() {
+                                activeDirMenu.close();
+                                infoDialog.showFor(root.currentFolderPath(), root.folderDisplayName, true);
+                            }
+                        }
+                    ]
+
+                    delegate: Rectangle {
+                        width: parent.width
+                        height: 28
+                        radius: Theme.cornerRadius - 2
+                        color: dirMenuArea.containsMouse 
+                            ? Theme.withAlpha(Theme.primary, 0.15) 
+                            : "transparent"
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.spacingS
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.spacingS
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: Theme.spacingS
+
+                            DankIcon {
+                                name: modelData.icon || ""
+                                size: 14
+                                color: Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            StyledText {
+                                text: modelData.text || ""
+                                font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.surfaceText
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        MouseArea {
+                            id: dirMenuArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: modelData.action()
+                        }
+                    }
+                }
+            }
         }
     }
 
