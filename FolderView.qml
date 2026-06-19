@@ -39,6 +39,17 @@ DesktopPluginComponent {
     readonly property var pinnedPaths: pluginData.pinnedPaths ?? []
     onPinnedPathsChanged: updateFilteredModel()
 
+    readonly property var contextMenuActionsSetting: pluginData.contextMenuActions ?? []
+    readonly property var activeContextMenuActions: {
+        let _actions = pluginData.contextMenuActions;
+        let _sel = root.selectedFilePaths;
+        let _name = quickMenu.currentName;
+        let _path = quickMenu.currentPath;
+        let _dir = quickMenu.currentIsDir;
+
+        return root.getFilteredContextMenuActions();
+    }
+
     // Favorite directories (absolute paths) shown as a dedicated section in the
     // folder switcher for quick access.
     readonly property var favoriteFolders: pluginData.favoriteFolders ?? []
@@ -873,6 +884,282 @@ DesktopPluginComponent {
         function onCountChanged() {
             updateFilteredModel();
         }
+    }
+
+    function getFilteredContextMenuActions() {
+        let savedList = pluginData.contextMenuActions;
+        let defaults = [
+            { "id": "open", "enabled": true },
+            { "id": "float", "enabled": true },
+            { "id": "copy", "enabled": true },
+            { "id": "copyPath", "enabled": true },
+            { "id": "rename", "enabled": true },
+            { "id": "info", "enabled": true },
+            { "id": "extractHere", "enabled": true },
+            { "id": "extractToFolder", "enabled": true },
+            { "id": "viewContents", "enabled": true },
+            { "id": "favorite", "enabled": true },
+            { "id": "pin", "enabled": true },
+            { "id": "groupStack", "enabled": true },
+            { "id": "ungroupStack", "enabled": true },
+            { "id": "trash", "enabled": true }
+        ];
+
+        let activeList = [];
+        if (savedList && Array.isArray(savedList)) {
+            let added = {};
+            for (let item of savedList) {
+                if (item && item.id && defaults.some(d => d.id === item.id)) {
+                    activeList.push({
+                        "id": item.id,
+                        "enabled": item.enabled !== undefined ? !!item.enabled : true
+                    });
+                    added[item.id] = true;
+                }
+            }
+            for (let d of defaults) {
+                if (!added[d.id]) {
+                    activeList.push(d);
+                }
+            }
+        } else {
+            activeList = defaults;
+        }
+
+        let actionMap = {
+            "open": {
+                "id": "open",
+                "text": I18n.tr("Open"),
+                "icon": "open_in_new",
+                "visible": true,
+                "action": function() {
+                    quickMenu.close();
+                    for (let path of root.selectedFilePaths) {
+                        let clean = root._cleanPath(path);
+                        if (clean.endsWith(".desktop")) {
+                            root.launchDesktopFile(path);
+                        } else {
+                            Quickshell.execDetached(["gio", "open", clean]);
+                        }
+                    }
+                    root.clearSelection();
+                }
+            },
+            "float": {
+                "id": "float",
+                "text": I18n.tr("Float File"),
+                "icon": "picture_in_picture",
+                "visible": root.selectedFilePaths.length === 1 && (root.isImage(quickMenu.currentName) || quickMenu.currentName.toLowerCase().endsWith(".pdf")),
+                "action": function() {
+                    quickMenu.close();
+                    const path = root.selectedFilePaths[0];
+                    Quickshell.execDetached(["dms", "ipc", "call", "floaty", "floatFromUrl", "file://" + path]);
+                }
+            },
+            "copy": {
+                "id": "copy",
+                "text": I18n.tr("Copy"),
+                "icon": "content_copy",
+                "visible": true,
+                "action": function() {
+                    quickMenu.close();
+                    const paths = root.selectedFilePaths;
+                    const name = quickMenu.currentName;
+                    if (paths.length === 1 && root.isImage(name)) {
+                        DMSService.sendRequest("clipboard.copyFile", { "filePath": paths[0] }, function(resp) {
+                            if (resp.error) {
+                                ToastService.showToast(I18n.tr("Copy failed") + ": " + resp.error, ToastService.levelError);
+                            } else {
+                                ToastService.showToast(I18n.tr("Image Copied") + ": " + name, ToastService.levelInfo);
+                            }
+                        });
+                        return;
+                    }
+                    let uris = [];
+                    for (let path of paths) {
+                        uris.push("file://" + path);
+                    }
+                    const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
+                    Quickshell.execDetached(["bash", "-c", cmd]);
+                    const label = paths.length > 1
+                        ? I18n.tr("Copied %1 items").arg(paths.length)
+                        : I18n.tr("File Copied") + ": " + name;
+                    ToastService.showToast(label, ToastService.levelInfo);
+                }
+            },
+            "copyPath": {
+                "id": "copyPath",
+                "text": I18n.tr("Copy Path"),
+                "icon": "content_copy",
+                "visible": true,
+                "action": function() {
+                    quickMenu.close();
+                    const joinedPaths = root.selectedFilePaths.join("\n");
+                    Quickshell.execDetached(["dms", "cl", "copy", joinedPaths]);
+                    let label = root.selectedFilePaths.length > 1
+                        ? I18n.tr("Copied %1 paths").arg(root.selectedFilePaths.length)
+                        : I18n.tr("Copied to Clipboard") + ": " + quickMenu.currentName;
+                    ToastService.showToast(label, ToastService.levelInfo);
+                }
+            },
+            "rename": {
+                "id": "rename",
+                "text": I18n.tr("Rename"),
+                "icon": "edit",
+                "visible": root.selectedFilePaths.length <= 1,
+                "action": function() {
+                    quickMenu.close();
+                    renameDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
+                }
+            },
+            "info": {
+                "id": "info",
+                "text": I18n.tr("Info"),
+                "icon": "info",
+                "visible": root.selectedFilePaths.length <= 1 && !quickMenu.currentPath.startsWith("stack://"),
+                "action": function() {
+                    quickMenu.close();
+                    infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
+                }
+            },
+            "extractHere": {
+                "id": "extractHere",
+                "text": I18n.tr("Extract Here"),
+                "icon": "unarchive",
+                "visible": root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                "action": function() {
+                    quickMenu.close();
+                    const path = root._cleanPath(quickMenu.currentPath);
+                    const dest = root._cleanPath(root.targetFolderUrl);
+                    const lower = path.toLowerCase();
+                    let cmd = [];
+                    if (lower.endsWith(".zip")) {
+                        cmd = ["unzip", "-o", "-q", path, "-d", dest];
+                    } else if (lower.endsWith(".rar")) {
+                        cmd = ["unrar-free", "-x", path, dest];
+                    } else if (lower.endsWith(".7z")) {
+                        cmd = ["7z", "x", "-y", "-o" + dest, path];
+                    } else {
+                        cmd = ["tar", "-xf", path, "-C", dest];
+                    }
+                    ToastService.showToast(I18n.tr("Extracting archive..."), ToastService.levelInfo);
+                    Proc.runCommand("extract-archive-here", cmd, (out, exitCode) => {
+                        if (exitCode === 0) {
+                            ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
+                        } else {
+                            ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
+                        }
+                    });
+                }
+            },
+            "extractToFolder": {
+                "id": "extractToFolder",
+                "text": I18n.tr("Extract to folder"),
+                "icon": "folder_zip",
+                "visible": root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                "action": function() {
+                    quickMenu.close();
+                    const path = root._cleanPath(quickMenu.currentPath);
+                    const destDir = root._cleanPath(root.targetFolderUrl);
+                    const nameWithoutExt = quickMenu.currentName.replace(/\.(zip|tar\.gz|tgz|tar\.xz|tar\.bz2|tar|rar|7z)$/i, "");
+                    const finalDest = destDir + "/" + nameWithoutExt;
+                    const lower = path.toLowerCase();
+                    let cmd = [];
+                    if (lower.endsWith(".zip")) {
+                        cmd = ["sh", "-c", "mkdir -p \"$1\" && unzip -o -q \"$2\" -d \"$1\"", "extract_zip", finalDest, path];
+                    } else if (lower.endsWith(".rar")) {
+                        cmd = ["sh", "-c", "mkdir -p \"$1\" && unrar-free -x \"$2\" \"$1\"", "extract_rar", finalDest, path];
+                    } else if (lower.endsWith(".7z")) {
+                        cmd = ["7z", "x", "-y", "-o" + finalDest, path];
+                    } else {
+                        cmd = ["sh", "-c", "mkdir -p \"$1\" && tar -xf \"$2\" -C \"$1\"", "extract_tar", finalDest, path];
+                    }
+                    ToastService.showToast(I18n.tr("Extracting to folder..."), ToastService.levelInfo);
+                    Proc.runCommand("extract-archive-to-folder", cmd, (out, exitCode) => {
+                        if (exitCode === 0) {
+                            ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
+                        } else {
+                            ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
+                        }
+                    });
+                }
+            },
+            "viewContents": {
+                "id": "viewContents",
+                "text": I18n.tr("View Contents"),
+                "icon": "visibility",
+                "visible": root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                "action": function() {
+                    quickMenu.close();
+                    archiveDialog.showFor(quickMenu.currentPath, quickMenu.currentName);
+                }
+            },
+            "favorite": {
+                "id": "favorite",
+                "actionName": "favorite",
+                "icon": "star",
+                "visible": root.selectedFilePaths.length <= 1 && quickMenu.currentIsDir && !quickMenu.currentPath.startsWith("stack://"),
+                "action": function() {
+                    quickMenu.close();
+                    root.toggleFavorite(root._cleanPath(quickMenu.currentPath));
+                }
+            },
+            "pin": {
+                "id": "pin",
+                "actionName": "pin",
+                "icon": "push_pin",
+                "visible": true,
+                "action": function() {
+                    quickMenu.close();
+                    root.togglePin(quickMenu.currentPath);
+                }
+            },
+            "groupStack": {
+                "id": "groupStack",
+                "text": I18n.tr("Group into Stack"),
+                "icon": "layers",
+                "visible": root.selectedFilePaths.length > 1 && root.selectedFilePaths.every(p => !p.startsWith("stack://")),
+                "action": function() {
+                    quickMenu.close();
+                    createStackDialog.showFor(root.selectedFilePaths);
+                }
+            },
+            "ungroupStack": {
+                "id": "ungroupStack",
+                "text": I18n.tr("Ungroup Stack"),
+                "icon": "layers_clear",
+                "visible": root.selectedFilePaths.length === 1 && quickMenu.currentPath.startsWith("stack://"),
+                "action": function() {
+                    quickMenu.close();
+                    let stackId = quickMenu.currentPath.substring(8);
+                    root.ungroupStack(stackId);
+                }
+            },
+            "trash": {
+                "id": "trash",
+                "text": I18n.tr("Move to Trash"),
+                "icon": "delete",
+                "dangerous": true,
+                "visible": root.selectedFilePaths.every(p => !p.startsWith("stack://")),
+                "action": function() {
+                    quickMenu.close();
+                    const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
+                    Quickshell.execDetached(["gio", "trash"].concat(cleanPaths));
+                    root.clearSelection();
+                }
+            }
+        };
+
+        let result = [];
+        for (let item of activeList) {
+            if (item.enabled && actionMap[item.id]) {
+                if (item.id === "trash" && result.length > 0) {
+                    result.push({ "isSeparator": true });
+                }
+                result.push(actionMap[item.id]);
+            }
+        }
+        return result;
     }
 
     function isImage(fileName) {
@@ -2420,225 +2707,7 @@ DesktopPluginComponent {
                 spacing: 2
 
                 Repeater {
-                    model: [
-                        {
-                            text: I18n.tr("Open"),
-                            icon: "open_in_new",
-                            visible: true,
-                            action: function() {
-                                quickMenu.close();
-                                for (let path of root.selectedFilePaths) {
-                                    let clean = root._cleanPath(path);
-                                    if (clean.endsWith(".desktop")) {
-                                        root.launchDesktopFile(path);
-                                    } else {
-                                        Quickshell.execDetached(["gio", "open", clean]);
-                                    }
-                                }
-                                root.clearSelection();
-                            }
-                        },
-                        {
-                            text: I18n.tr("Float File"),
-                            icon: "picture_in_picture",
-                            visible: root.selectedFilePaths.length === 1 && (root.isImage(quickMenu.currentName) || quickMenu.currentName.toLowerCase().endsWith(".pdf")),
-                            action: function() {
-                                quickMenu.close();
-                                const path = root.selectedFilePaths[0];
-                                Quickshell.execDetached(["dms", "ipc", "call", "floaty", "floatFromUrl", "file://" + path]);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Copy"),
-                            icon: "content_copy",
-                            visible: true,
-                            action: function() {
-                                quickMenu.close();
-                                const paths = root.selectedFilePaths;
-                                const name = quickMenu.currentName;
-
-                                // Single image file: use DMS clipboard.copyFile so it appears
-                                // in the DMS clipboard history and can be pasted in any app.
-                                if (paths.length === 1 && root.isImage(name)) {
-                                    DMSService.sendRequest("clipboard.copyFile", { "filePath": paths[0] }, function(resp) {
-                                        if (resp.error) {
-                                            ToastService.showToast(I18n.tr("Copy failed") + ": " + resp.error, ToastService.levelError);
-                                        } else {
-                                            ToastService.showToast(I18n.tr("Image Copied") + ": " + name, ToastService.levelInfo);
-                                        }
-                                    });
-                                    return;
-                                }
-
-                                // Multi-file or non-image: use wl-copy with the gnome URI
-                                // format so the selection can be pasted into file managers.
-                                // Note: dms cl copy cannot be used here because the DMS daemon
-                                // intercepts and re-serves the entry, corrupting the content.
-                                let uris = [];
-                                for (let path of paths) {
-                                    uris.push("file://" + path);
-                                }
-                                const cmd = "echo -ne \"copy\\n" + uris.join("\\n") + "\" | wl-copy -t x-special/gnome-copied-files";
-                                Quickshell.execDetached(["bash", "-c", cmd]);
-
-                                const label = paths.length > 1
-                                    ? I18n.tr("Copied %1 items").arg(paths.length)
-                                    : I18n.tr("File Copied") + ": " + name;
-                                ToastService.showToast(label, ToastService.levelInfo);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Copy Path"),
-                            icon: "content_copy",
-                            visible: true,
-                            action: function() {
-                                quickMenu.close();
-                                const joinedPaths = root.selectedFilePaths.join("\n");
-                                Quickshell.execDetached(["dms", "cl", "copy", joinedPaths]);
-                                
-                                let label = root.selectedFilePaths.length > 1
-                                    ? I18n.tr("Copied %1 paths").arg(root.selectedFilePaths.length)
-                                    : I18n.tr("Copied to Clipboard") + ": " + quickMenu.currentName;
-                                ToastService.showToast(label, ToastService.levelInfo);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Rename"),
-                            icon: "edit",
-                            visible: root.selectedFilePaths.length <= 1,
-                            action: function() {
-                                quickMenu.close();
-                                renameDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Info"),
-                            icon: "info",
-                            visible: root.selectedFilePaths.length <= 1 && !quickMenu.currentPath.startsWith("stack://"),
-                            action: function() {
-                                quickMenu.close();
-                                infoDialog.showFor(quickMenu.currentPath, quickMenu.currentName, quickMenu.currentIsDir);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Extract Here"),
-                            icon: "unarchive",
-                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
-                            action: function() {
-                                quickMenu.close();
-                                const path = root._cleanPath(quickMenu.currentPath);
-                                const dest = root._cleanPath(root.targetFolderUrl);
-                                const lower = path.toLowerCase();
-                                let cmd = [];
-                                if (lower.endsWith(".zip")) {
-                                    cmd = ["unzip", "-o", "-q", path, "-d", dest];
-                                } else if (lower.endsWith(".rar")) {
-                                    cmd = ["unrar-free", "-x", path, dest];
-                                } else if (lower.endsWith(".7z")) {
-                                    cmd = ["7z", "x", "-y", "-o" + dest, path];
-                                } else {
-                                    cmd = ["tar", "-xf", path, "-C", dest];
-                                }
-                                ToastService.showToast(I18n.tr("Extracting archive..."), ToastService.levelInfo);
-                                Proc.runCommand("extract-archive-here", cmd, (out, exitCode) => {
-                                    if (exitCode === 0) {
-                                        ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
-                                    } else {
-                                        ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
-                                    }
-                                });
-                            }
-                        },
-                        {
-                            text: I18n.tr("Extract to folder"),
-                            icon: "folder_zip",
-                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
-                            action: function() {
-                                quickMenu.close();
-                                const path = root._cleanPath(quickMenu.currentPath);
-                                const destDir = root._cleanPath(root.targetFolderUrl);
-                                const nameWithoutExt = quickMenu.currentName.replace(/\.(zip|tar\.gz|tgz|tar\.xz|tar\.bz2|tar|rar|7z)$/i, "");
-                                const finalDest = destDir + "/" + nameWithoutExt;
-                                const lower = path.toLowerCase();
-                                let cmd = [];
-                                if (lower.endsWith(".zip")) {
-                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && unzip -o -q \"$2\" -d \"$1\"", "extract_zip", finalDest, path];
-                                } else if (lower.endsWith(".rar")) {
-                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && unrar-free -x \"$2\" \"$1\"", "extract_rar", finalDest, path];
-                                } else if (lower.endsWith(".7z")) {
-                                    cmd = ["7z", "x", "-y", "-o" + finalDest, path];
-                                } else {
-                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && tar -xf \"$2\" -C \"$1\"", "extract_tar", finalDest, path];
-                                }
-                                ToastService.showToast(I18n.tr("Extracting to folder..."), ToastService.levelInfo);
-                                Proc.runCommand("extract-archive-to-folder", cmd, (out, exitCode) => {
-                                    if (exitCode === 0) {
-                                        ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
-                                    } else {
-                                        ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
-                                    }
-                                });
-                            }
-                        },
-                        {
-                            text: I18n.tr("View Contents"),
-                            icon: "visibility",
-                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
-                            action: function() {
-                                quickMenu.close();
-                                archiveDialog.showFor(quickMenu.currentPath, quickMenu.currentName);
-                            }
-                        },
-                        {
-                            actionName: "favorite",
-                            icon: "star",
-                            visible: root.selectedFilePaths.length <= 1 && quickMenu.currentIsDir && !quickMenu.currentPath.startsWith("stack://"),
-                            action: function() {
-                                quickMenu.close();
-                                root.toggleFavorite(root._cleanPath(quickMenu.currentPath));
-                            }
-                        },
-                        {
-                            actionName: "pin",
-                            visible: true,
-                            action: function() {
-                                quickMenu.close();
-                                root.togglePin(quickMenu.currentPath);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Group into Stack"),
-                            icon: "layers",
-                            visible: root.selectedFilePaths.length > 1 && root.selectedFilePaths.every(p => !p.startsWith("stack://")),
-                            action: function() {
-                                quickMenu.close();
-                                createStackDialog.showFor(root.selectedFilePaths);
-                            }
-                        },
-                        {
-                            text: I18n.tr("Ungroup Stack"),
-                            icon: "layers_clear",
-                            visible: root.selectedFilePaths.length === 1 && quickMenu.currentPath.startsWith("stack://"),
-                            action: function() {
-                                quickMenu.close();
-                                let stackId = quickMenu.currentPath.substring(8);
-                                root.ungroupStack(stackId);
-                            }
-                        },
-                        { isSeparator: true },
-                        {
-                            text: I18n.tr("Move to Trash"),
-                            icon: "delete",
-                            dangerous: true,
-                            visible: root.selectedFilePaths.every(p => !p.startsWith("stack://")),
-                            action: function() {
-                                quickMenu.close();
-                                const cleanPaths = root.selectedFilePaths.map(p => root._cleanPath(p));
-                                Quickshell.execDetached(["gio", "trash"].concat(cleanPaths));
-                                root.clearSelection();
-                            }
-                        }
-                    ]
+                    model: root.activeContextMenuActions
 
                     delegate: Rectangle {
                         width: parent.width

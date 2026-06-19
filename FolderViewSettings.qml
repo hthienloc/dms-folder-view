@@ -128,6 +128,25 @@ PluginSettings {
     }
 
     SettingsCard {
+        SectionTitle {
+            id: contextMenuTitle
+            text: I18n.tr("Context Menu Actions")
+            icon: "menu"
+            collapsible: true
+            settingKey: "contextMenuActionsExpanded"
+            showReset: true
+            onResetClicked: {
+                contextMenuActionsSetting.reset();
+            }
+        }
+
+        ContextMenuActionsConfig {
+            id: contextMenuActionsSetting
+            visible: contextMenuTitle.isExpanded
+        }
+    }
+
+    SettingsCard {
         SectionTitle { 
             id: usageTitle
             text: I18n.tr("Usage Guide")
