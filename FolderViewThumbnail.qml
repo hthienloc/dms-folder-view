@@ -130,7 +130,11 @@ Item {
         let path = String(url);
         if (path.startsWith("file://")) path = path.substring(7);
         if (path.startsWith("localhost/")) path = path.substring(9);
-        return path;
+        try {
+            return decodeURIComponent(path);
+        } catch (e) {
+            return path;
+        }
     }
 
     function requestThumbnail() {

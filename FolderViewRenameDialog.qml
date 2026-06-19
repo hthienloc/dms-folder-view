@@ -112,6 +112,9 @@ Popup {
             if (cleanPath.startsWith("localhost/")) {
                 cleanPath = cleanPath.substring(9);
             }
+            try {
+                cleanPath = decodeURIComponent(cleanPath);
+            } catch (e) {}
         }
         renameDialog.filePath = cleanPath;
         renameDialog.oldName = name;

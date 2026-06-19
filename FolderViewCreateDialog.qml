@@ -119,6 +119,9 @@ Popup {
         if (pathStr.startsWith("localhost/")) {
             pathStr = pathStr.substring(9);
         }
+        try {
+            pathStr = decodeURIComponent(pathStr);
+        } catch (e) {}
         
         const targetPath = pathStr + "/" + name;
         

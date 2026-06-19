@@ -445,7 +445,11 @@ Popup {
         if (pathStr.startsWith("localhost/")) {
             pathStr = pathStr.substring(9);
         }
-        return pathStr;
+        try {
+            return decodeURIComponent(pathStr);
+        } catch (e) {
+            return pathStr;
+        }
     }
 
     function createSystemAppShortcut(appName, appExec, appIcon) {

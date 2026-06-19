@@ -205,7 +205,11 @@ DesktopPluginComponent {
         if (path.startsWith("localhost/")) {
             path = path.substring(9);
         }
-        return path;
+        try {
+            return decodeURIComponent(path);
+        } catch (e) {
+            return path;
+        }
     }
 
     // Single source of truth for renaming, shared by the inline editor and the
@@ -874,6 +878,18 @@ DesktopPluginComponent {
     function isImage(fileName) {
         const ext = fileName.split('.').pop().toLowerCase();
         return ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].indexOf(ext) !== -1;
+    }
+
+    function isArchive(fileName) {
+        const lower = fileName.toLowerCase();
+        return lower.endsWith(".zip") ||
+               lower.endsWith(".tar.gz") ||
+               lower.endsWith(".tgz") ||
+               lower.endsWith(".tar.xz") ||
+               lower.endsWith(".tar.bz2") ||
+               lower.endsWith(".tar") ||
+               lower.endsWith(".rar") ||
+               lower.endsWith(".7z");
     }
 
     function getIconName(fileName, isDir) {
@@ -2505,6 +2521,75 @@ DesktopPluginComponent {
                             }
                         },
                         {
+                            text: I18n.tr("Extract Here"),
+                            icon: "unarchive",
+                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                            action: function() {
+                                quickMenu.close();
+                                const path = root._cleanPath(quickMenu.currentPath);
+                                const dest = root._cleanPath(root.targetFolderUrl);
+                                const lower = path.toLowerCase();
+                                let cmd = [];
+                                if (lower.endsWith(".zip")) {
+                                    cmd = ["unzip", "-o", "-q", path, "-d", dest];
+                                } else if (lower.endsWith(".rar")) {
+                                    cmd = ["unrar-free", "-x", path, dest];
+                                } else if (lower.endsWith(".7z")) {
+                                    cmd = ["7z", "x", "-y", "-o" + dest, path];
+                                } else {
+                                    cmd = ["tar", "-xf", path, "-C", dest];
+                                }
+                                ToastService.showToast(I18n.tr("Extracting archive..."), ToastService.levelInfo);
+                                Proc.runCommand("extract-archive-here", cmd, (out, exitCode) => {
+                                    if (exitCode === 0) {
+                                        ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
+                                    } else {
+                                        ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
+                                    }
+                                });
+                            }
+                        },
+                        {
+                            text: I18n.tr("Extract to folder"),
+                            icon: "folder_zip",
+                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                            action: function() {
+                                quickMenu.close();
+                                const path = root._cleanPath(quickMenu.currentPath);
+                                const destDir = root._cleanPath(root.targetFolderUrl);
+                                const nameWithoutExt = quickMenu.currentName.replace(/\.(zip|tar\.gz|tgz|tar\.xz|tar\.bz2|tar|rar|7z)$/i, "");
+                                const finalDest = destDir + "/" + nameWithoutExt;
+                                const lower = path.toLowerCase();
+                                let cmd = [];
+                                if (lower.endsWith(".zip")) {
+                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && unzip -o -q \"$2\" -d \"$1\"", "extract_zip", finalDest, path];
+                                } else if (lower.endsWith(".rar")) {
+                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && unrar-free -x \"$2\" \"$1\"", "extract_rar", finalDest, path];
+                                } else if (lower.endsWith(".7z")) {
+                                    cmd = ["7z", "x", "-y", "-o" + finalDest, path];
+                                } else {
+                                    cmd = ["sh", "-c", "mkdir -p \"$1\" && tar -xf \"$2\" -C \"$1\"", "extract_tar", finalDest, path];
+                                }
+                                ToastService.showToast(I18n.tr("Extracting to folder..."), ToastService.levelInfo);
+                                Proc.runCommand("extract-archive-to-folder", cmd, (out, exitCode) => {
+                                    if (exitCode === 0) {
+                                        ToastService.showToast(I18n.tr("Extraction completed successfully"), ToastService.levelInfo);
+                                    } else {
+                                        ToastService.showToast(I18n.tr("Extraction failed"), ToastService.levelError);
+                                    }
+                                });
+                            }
+                        },
+                        {
+                            text: I18n.tr("View Contents"),
+                            icon: "visibility",
+                            visible: root.selectedFilePaths.length === 1 && root.isArchive(quickMenu.currentName),
+                            action: function() {
+                                quickMenu.close();
+                                archiveDialog.showFor(quickMenu.currentPath, quickMenu.currentName);
+                            }
+                        },
+                        {
                             actionName: "favorite",
                             icon: "star",
                             visible: root.selectedFilePaths.length <= 1 && quickMenu.currentIsDir && !quickMenu.currentPath.startsWith("stack://"),
@@ -2639,6 +2724,12 @@ DesktopPluginComponent {
     // Info Dialog
     FolderViewInfoDialog {
         id: infoDialog
+        parent: root
+    }
+
+    // Archive Contents Viewer Dialog
+    FolderViewArchiveDialog {
+        id: archiveDialog
         parent: root
     }
 

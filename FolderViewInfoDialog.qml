@@ -53,26 +53,54 @@ Popup {
             anchors.margins: Theme.spacingM
             spacing: Theme.spacingM
 
-            // Header with Icon and Name
-            Row {
+            // Header with Icon and Name + Close button
+            Item {
                 width: parent.width
-                spacing: Theme.spacingS
+                height: 28
 
-                DankIcon {
-                    name: infoDialog.isDir ? "folder" : "description"
-                    size: 28
-                    color: Theme.primary
+                Row {
+                    anchors.left: parent.left
+                    anchors.right: closeButtonMouseArea.left
+                    anchors.rightMargin: Theme.spacingS
                     anchors.verticalCenter: parent.verticalCenter
+                    spacing: Theme.spacingS
+
+                    DankIcon {
+                        name: infoDialog.isDir ? "folder" : "description"
+                        size: 28
+                        color: Theme.primary
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    StyledText {
+                        text: infoDialog.fileName
+                        font.bold: true
+                        font.pixelSize: Theme.fontSizeLarge
+                        color: Theme.surfaceText
+                        width: parent.width - 64
+                        elide: Text.ElideMiddle
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
 
-                StyledText {
-                    text: infoDialog.fileName
-                    font.bold: true
-                    font.pixelSize: Theme.fontSizeLarge
-                    color: Theme.surfaceText
-                    width: parent.width - 40
-                    elide: Text.ElideMiddle
+                // Close Dialog Button (X Icon)
+                MouseArea {
+                    id: closeButtonMouseArea
+                    width: 24
+                    height: 24
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: infoDialog.close()
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
+
+                    DankIcon {
+                        anchors.centerIn: parent
+                        name: "close"
+                        size: 16
+                        color: Theme.surfaceText
+                        opacity: parent.containsMouse ? 1.0 : 0.6
+                    }
                 }
             }
 
@@ -201,13 +229,6 @@ Popup {
                         Quickshell.execDetached(["gio", "open", infoDialog.filePath]);
                     }
                 }
-
-                DankButton {
-                    text: I18n.tr("Close")
-                    backgroundColor: Theme.surfaceContainerHigh
-                    textColor: Theme.surfaceText
-                    onClicked: infoDialog.close()
-                }
             }
         }
     }
@@ -220,6 +241,9 @@ Popup {
         if (cleanPath.startsWith("localhost/")) {
             cleanPath = cleanPath.substring(9);
         }
+        try {
+            cleanPath = decodeURIComponent(cleanPath);
+        } catch (e) {}
         
         infoDialog.filePath = cleanPath;
         infoDialog.fileName = name;
