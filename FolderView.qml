@@ -1004,7 +1004,6 @@ DesktopPluginComponent {
     // Outer frosted glass background
     StyledRect {
         anchors.fill: parent
-        anchors.margins: 15
         radius: Theme.cornerRadius
         clip: true
         color: Theme.withAlpha(Theme.surfaceContainer, root.backgroundOpacity)
