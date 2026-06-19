@@ -11,7 +11,8 @@ Popup {
     width: 340
     height: contentColumn.implicitHeight + Theme.spacingM * 2
     padding: 0
-    modal: false
+    modal: true
+    dim: true
     focus: true
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
@@ -28,6 +29,11 @@ Popup {
     property string fileModified: ""
     property string fileSize: ""
     property string fileOwner: ""
+    property string fileAccessed: ""
+    property string fileOctal: ""
+    property string itemsCount: ""
+    property string symlinkTarget: ""
+    property bool isSymlink: false
 
     background: Rectangle {
         color: "transparent"
@@ -86,7 +92,7 @@ Popup {
                 // Rows helper component
                 component InfoRow: Item {
                     width: parent.width
-                    height: Math.max(label.implicitHeight, value.implicitHeight)
+                    height: visible ? Math.max(label.implicitHeight, value.implicitHeight) : 0
                     property alias labelText: label.text
                     property alias valueText: value.text
 
@@ -112,9 +118,12 @@ Popup {
 
                 InfoRow { labelText: I18n.tr("Type:"); valueText: infoDialog.fileType }
                 InfoRow { labelText: I18n.tr("Size:"); valueText: infoDialog.fileSize }
+                InfoRow { labelText: I18n.tr("Items:"); valueText: infoDialog.itemsCount; visible: infoDialog.isDir }
+                InfoRow { labelText: I18n.tr("Target:"); valueText: infoDialog.symlinkTarget; visible: infoDialog.isSymlink }
                 InfoRow { labelText: I18n.tr("Modified:"); valueText: infoDialog.fileModified }
+                InfoRow { labelText: I18n.tr("Accessed:"); valueText: infoDialog.fileAccessed }
                 InfoRow { labelText: I18n.tr("Owner:"); valueText: infoDialog.fileOwner }
-                InfoRow { labelText: I18n.tr("Permissions:"); valueText: infoDialog.filePermissions }
+                InfoRow { labelText: I18n.tr("Permissions:"); valueText: infoDialog.filePermissions + (infoDialog.fileOctal ? " (" + infoDialog.fileOctal + ")" : "") }
             }
 
             Rectangle {
@@ -164,12 +173,41 @@ Popup {
                 }
             }
 
-            DankButton {
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: I18n.tr("Close")
-                backgroundColor: Theme.surfaceContainerHigh
-                textColor: Theme.surfaceText
-                onClicked: infoDialog.close()
+                spacing: Theme.spacingS
+
+                DankButton {
+                    text: infoDialog.isDir ? I18n.tr("Open Terminal") : I18n.tr("Open VS Code")
+                    backgroundColor: Theme.primary
+                    textColor: Theme.primaryText
+                    onClicked: {
+                        infoDialog.close();
+                        if (infoDialog.isDir) {
+                            const term = SessionData.resolveTerminal() || "xterm";
+                            Quickshell.execDetached(["bash", "-c", "cd \"$1\" && exec \"$2\"", "launch_terminal", infoDialog.filePath, term]);
+                        } else {
+                            Quickshell.execDetached(["code", infoDialog.filePath]);
+                        }
+                    }
+                }
+
+                DankButton {
+                    text: infoDialog.isDir ? I18n.tr("Open Folder") : I18n.tr("Open File")
+                    backgroundColor: Theme.surfaceContainerHigh
+                    textColor: Theme.surfaceText
+                    onClicked: {
+                        infoDialog.close();
+                        Quickshell.execDetached(["gio", "open", infoDialog.filePath]);
+                    }
+                }
+
+                DankButton {
+                    text: I18n.tr("Close")
+                    backgroundColor: Theme.surfaceContainerHigh
+                    textColor: Theme.surfaceText
+                    onClicked: infoDialog.close()
+                }
             }
         }
     }
@@ -193,6 +231,11 @@ Popup {
         infoDialog.fileModified = "..."
         infoDialog.fileSize = "..."
         infoDialog.fileOwner = "..."
+        infoDialog.fileAccessed = "..."
+        infoDialog.fileOctal = ""
+        infoDialog.itemsCount = "..."
+        infoDialog.symlinkTarget = ""
+        infoDialog.isSymlink = false
         
         infoDialog.open();
         fetchInfo();
@@ -200,21 +243,42 @@ Popup {
 
     function fetchInfo() {
         const path = infoDialog.filePath;
-        // %F|%A|%y|%s|%U|%G
-        const statCmd = ["stat", "-c", "%F|%A|%y|%s|%U|%G", path];
+        // %F|%A|%y|%s|%U|%G|%a|%x|%N
+        const statCmd = ["stat", "-c", "%F|%A|%y|%s|%U|%G|%a|%x|%N", path];
         
         Proc.runCommand("get-file-info-structured", statCmd, (output, exitCode) => {
             if (exitCode === 0) {
                 const parts = output.trim().split('|');
-                if (parts.length >= 6) {
+                if (parts.length >= 9) {
                     infoDialog.fileType = parts[0];
                     infoDialog.filePermissions = parts[1];
                     infoDialog.fileModified = parts[2].split('.')[0]; // Remove nanoseconds
                     infoDialog.fileOwner = parts[4] + ":" + parts[5];
+                    infoDialog.fileOctal = parts[6];
+                    infoDialog.fileAccessed = parts[7].split('.')[0]; // Remove nanoseconds
                     
+                    const symInfo = parts[8];
+                    infoDialog.isSymlink = infoDialog.fileType.toLowerCase().indexOf("symbolic link") !== -1;
+                    if (infoDialog.isSymlink && symInfo.indexOf(" -> ") !== -1) {
+                        const targetPart = symInfo.split(" -> ")[1];
+                        infoDialog.symlinkTarget = targetPart ? targetPart.replace(/^'|'$/g, "") : "";
+                    } else {
+                        infoDialog.symlinkTarget = "";
+                    }
+
                     const rawSize = parts[3];
                     
                     if (infoDialog.isDir) {
+                        // Fetch items count safely
+                        Proc.runCommand("get-dir-items", ["sh", "-c", "ls -A \"$1\" | wc -l", "get_items_count", path], (wcOutput, wcExit) => {
+                            if (wcExit === 0) {
+                                const count = parseInt(wcOutput.trim(), 10);
+                                infoDialog.itemsCount = count + (count === 1 ? " item" : " items");
+                            } else {
+                                infoDialog.itemsCount = "Unknown";
+                            }
+                        });
+
                         Proc.runCommand("get-dir-size", ["du", "-sh", path], (duOutput, duExit) => {
                             if (duExit === 0) {
                                 infoDialog.fileSize = duOutput.trim().split(/\s+/)[0];
@@ -223,6 +287,7 @@ Popup {
                             }
                         });
                     } else {
+                        infoDialog.itemsCount = "";
                         Proc.runCommand("get-file-size", ["ls", "-lh", path], (lsOutput, lsExit) => {
                             if (lsExit === 0) {
                                 const lsParts = lsOutput.trim().split(/\s+/);

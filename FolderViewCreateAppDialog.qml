@@ -23,6 +23,29 @@ Popup {
 
     property string targetFolderUrl: ""
     property var allApps: []
+    property string searchQuery: ""
+    property var availableLetters: {
+        let list = [];
+        const apps = allApps || [];
+        for (let i = 0; i < apps.length; i++) {
+            const app = apps[i];
+            if (app && app.name) {
+                const firstChar = app.name.trim().charAt(0).toUpperCase();
+                const target = /^[A-Z]$/.test(firstChar) ? firstChar : "#";
+                if (list.indexOf(target) === -1) {
+                    list.push(target);
+                }
+            }
+        }
+        return list;
+    }
+
+    function cleanExec(execStr) {
+        if (!execStr) return "";
+        let clean = execStr.replace(/["']?%[fFuUickdnNvVm]["']?/g, "");
+        clean = clean.replace(/%%/g, "%");
+        return clean.trim();
+    }
 
     function fetchApps() {
         // Fetch all apps directly from Quickshell's DesktopEntries singleton
@@ -33,44 +56,57 @@ Popup {
             if (app && !app.noDisplay) {
                 apps.push({
                     name: app.name || "",
-                    exec: app.execString || (app.command ? app.command.join(" ") : ""),
+                    exec: cleanExec(app.execString || (app.command ? app.command.join(" ") : "")),
                     icon: app.icon || ""
                 });
             }
         }
         apps.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         createAppDialog.allApps = apps;
-        updateAppModel();
     }
 
     onOpened: {
         Qt.callLater(() => {
             searchField.text = "";
+            createAppDialog.searchQuery = "";
             nameField.text = "";
             execField.text = "";
             iconField.text = "";
             if (createAppDialog.allApps.length === 0) {
                 fetchApps();
-            } else {
-                updateAppModel();
             }
             modeStack.currentIndex = 0;
             searchField.forceActiveFocus();
         });
     }
 
-    function updateAppModel() {
-        appModel.clear();
-        const query = searchField.text.trim().toLowerCase();
-        for (let i = 0; i < allApps.length; i++) {
-            const app = allApps[i];
-            if (query === "" || (app.name || "").toLowerCase().indexOf(query) !== -1 || (app.exec || "").toLowerCase().indexOf(query) !== -1) {
-                appModel.append({
-                    appName: app.name,
-                    appExec: app.exec,
-                    appIcon: app.icon
-                });
+    function jumpToLetter(letter) {
+        const s = searchQuery.toLowerCase().trim();
+        const filtered = allApps.filter(app => {
+            return s === "" || (app.name && app.name.toLowerCase().indexOf(s) !== -1) || (app.exec && app.exec.toLowerCase().indexOf(s) !== -1);
+        });
+
+        let targetIndex = -1;
+        for (let i = 0; i < filtered.length; i++) {
+            const app = filtered[i];
+            if (!app || !app.name) continue;
+            const firstChar = app.name.trim().charAt(0).toUpperCase();
+            
+            if (letter === "#") {
+                if (!/^[A-Z]$/.test(firstChar)) {
+                    targetIndex = i;
+                    break;
+                }
+            } else {
+                if (firstChar === letter) {
+                    targetIndex = i;
+                    break;
+                }
             }
+        }
+
+        if (targetIndex !== -1) {
+            appListView.positionViewAtIndex(targetIndex, ListView.Beginning);
         }
     }
 
@@ -200,12 +236,14 @@ Popup {
                 // Page 0: System Apps
                 Column {
                     spacing: Theme.spacingS
+                    width: parent.width
+                    height: parent.height
                     
                     DankTextField {
                         id: searchField
                         width: parent.width
                         placeholderText: I18n.tr("Search apps...")
-                        onTextChanged: updateAppModel()
+                        onTextChanged: createAppDialog.searchQuery = text
                     }
 
                     Rectangle {
@@ -217,71 +255,126 @@ Popup {
                         border.width: 1
                         clip: true
 
-                        ListModel { id: appModel }
-
-                        ListView {
-                            id: appListView
+                        RowLayout {
                             anchors.fill: parent
-                            model: appModel
-                            boundsBehavior: Flickable.StopAtBounds
-                            delegate: Rectangle {
-                                width: parent.width
-                                height: 56
-                                color: appMouse.containsMouse ? Theme.withAlpha(Theme.primary, 0.1) : "transparent"
-                                
-                                Row {
-                                    anchors.fill: parent
-                                    anchors.margins: Theme.spacingS
-                                    spacing: Theme.spacingS
-                                    
-                                    Image {
-                                        id: appImg
-                                        source: model.appIcon ? Quickshell.iconPath(model.appIcon) : ""
-                                        width: 36
-                                        height: 36
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: model.appIcon !== ""
-                                        fillMode: Image.PreserveAspectFit
-                                        asynchronous: true
-                                    }
-                                    
-                                    DankIcon {
-                                        name: "widgets"
-                                        size: 36
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: !appImg.visible || appImg.status === Image.Error
-                                        color: Theme.primary
-                                    }
+                            anchors.margins: 4
+                            spacing: Theme.spacingXS
 
-                                    Column {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        width: parent.width - 50
-                                        spacing: 2
-                                        StyledText {
-                                            text: model.appName
-                                            font.pixelSize: Theme.fontSizeSmall
-                                            font.bold: true
-                                            color: Theme.surfaceText
-                                        }
-                                        StyledText {
-                                            text: model.appExec
-                                            font.pixelSize: Theme.fontSizeTiny
-                                            color: Theme.surfaceVariantText
-                                            elide: Text.ElideRight
-                                            maximumLineCount: 2
-                                            wrapMode: Text.WrapAnywhere
+                            // Alphabet Index Sidebar (Left side)
+                            Item {
+                                id: indexSidebar
+                                Layout.preferredWidth: 16
+                                Layout.fillHeight: true
+                                visible: appListView.count > 0 && createAppDialog.searchQuery === ""
+
+                                Column {
+                                    id: alphabetColumn
+                                    anchors.centerIn: parent
+                                    width: parent.width
+                                    spacing: 1
+
+                                    Repeater {
+                                        model: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#"]
+
+                                        delegate: Item {
+                                            id: letterItem
+                                            required property var modelData
                                             width: parent.width
+                                            height: Math.floor(Math.min(13, (indexSidebar.height - 30) / 27))
+
+                                            readonly property bool hasApps: createAppDialog.availableLetters.includes(modelData)
+
+                                            HoverHandler {
+                                                id: letterHover
+                                                enabled: letterItem.hasApps
+                                            }
+
+                                            StyledText {
+                                                anchors.centerIn: parent
+                                                text: modelData
+                                                font.pixelSize: letterHover.hovered ? 9 : 8
+                                                font.bold: hasApps || letterHover.hovered
+                                                color: letterHover.hovered ? Theme.primary : (hasApps ? Theme.surfaceText : Theme.withAlpha(Theme.surfaceText, 0.3))
+                                                opacity: hasApps ? 1.0 : 0.6
+                                                Behavior on font.pixelSize { NumberAnimation { duration: 100 } }
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                enabled: letterItem.hasApps
+                                                cursorShape: letterItem.hasApps ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                                onClicked: {
+                                                    createAppDialog.jumpToLetter(modelData);
+                                                }
+                                            }
                                         }
                                     }
                                 }
+                            }
 
-                                MouseArea {
-                                    id: appMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        createAppDialog.createSystemAppShortcut(model.appName, model.appExec, model.appIcon);
+                            // List of Apps (Right side)
+                            ListView {
+                                id: appListView
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+                                spacing: 2
+                                model: {
+                                    const s = createAppDialog.searchQuery.toLowerCase().trim();
+                                    return createAppDialog.allApps.filter(app => {
+                                        return s === "" || (app.name && app.name.toLowerCase().indexOf(s) !== -1) || (app.exec && app.exec.toLowerCase().indexOf(s) !== -1);
+                                    });
+                                }
+                                delegate: Rectangle {
+                                    width: appListView.width
+                                    height: 38
+                                    radius: 6
+                                    color: appMouse.containsMouse ? Theme.withAlpha(Theme.surfaceText, 0.04) : "transparent"
+                                    
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: Theme.spacingS
+                                        spacing: Theme.spacingS
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        
+                                        Image {
+                                            id: appImg
+                                            source: modelData.icon ? Quickshell.iconPath(modelData.icon) : ""
+                                            width: 24
+                                            height: 24
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            visible: modelData.icon !== ""
+                                            fillMode: Image.PreserveAspectFit
+                                            asynchronous: true
+                                        }
+                                        
+                                        DankIcon {
+                                            name: "widgets"
+                                            size: 24
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            visible: !appImg.visible || appImg.status === Image.Error
+                                            color: Theme.primary
+                                        }
+
+                                        StyledText {
+                                            text: modelData.name
+                                            font.pixelSize: Theme.fontSizeSmall
+                                            color: Theme.surfaceText
+                                            elide: Text.ElideRight
+                                            width: parent.width - 48
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: appMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            createAppDialog.createSystemAppShortcut(modelData.name, modelData.exec, modelData.icon);
+                                        }
                                     }
                                 }
                             }
