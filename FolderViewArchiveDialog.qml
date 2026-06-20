@@ -106,7 +106,7 @@ Popup {
                 width: parent.width
                 height: 250
                 color: Theme.withAlpha(Theme.surfaceContainerHigh, 0.5)
-                radius: Theme.cornerRadiusSmall
+                radius: Theme.cornerRadius / 2
                 border.color: Theme.withAlpha(Theme.outline, 0.1)
                 clip: true
 
