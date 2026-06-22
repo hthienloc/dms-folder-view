@@ -57,7 +57,7 @@ To pin your images or PDF files as borderless, floating desktop widgets (always-
 
 ## License
 
-GPL-3.0
+MIT
 
 ## TODO / Roadmap
 
