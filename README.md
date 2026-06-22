@@ -2,6 +2,8 @@
 
 A folder viewer widget that displays and manages files and directories on your screen.
 
+> Alternative features and customizations can be found in the derivative [dms-conky fork by suruibin](https://github.com/suruibin/dms-conky).
+
 <img src="screenshot.png" width="400" alt="Screenshot">
 
 ## Install
@@ -76,6 +78,3 @@ MIT
 - [x] **Terminal Integration:** "Open in Terminal" or "Open in VS Code" shortcuts for the active directory.
 - [x] **Archive Support:** Basic management (view/extract) for compressed files (.zip, .tar.gz).
 
-## Credits
-
-Alternative features and customizations can be found in the derivative [dms-conky fork by suruibin](https://github.com/suruibin/dms-conky).
