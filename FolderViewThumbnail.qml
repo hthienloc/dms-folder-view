@@ -43,6 +43,7 @@ Item {
     }
 
     property string artSource: ""
+    property bool _mimeValid: false
     property bool showThumbnail: (isImage || isAudio || isPDF || isVideo || root.appIcon !== "") && !isDir && artSource !== "failed"
 
     DankIcon {
@@ -63,7 +64,7 @@ Item {
         source: {
             if (root.appIcon !== "") return Quickshell.iconPath(root.appIcon);
             if (root.artSource.startsWith("file://")) return root.artSource;
-            if (root.isImage && root.filePath !== "") {
+            if (root.isImage && root.filePath !== "" && root._mimeValid) {
                 return root.filePath.startsWith("file://") ? root.filePath : "file://" + root.filePath;
             }
             return "";
@@ -140,8 +141,25 @@ Item {
     function requestThumbnail() {
         if (isDir || artSource !== "" || filePath === "" || artSource === "failed") return;
         
-        // Use a timer to stagger requests and ensure properties are settled
+        if (isImage) {
+            validateImageMime();
+            return;
+        }
+        
         loadTimer.restart();
+    }
+
+    function validateImageMime() {
+        const rawPath = _cleanPath(filePath);
+        const hash = djb2Hash(rawPath);
+        Proc.runCommand("mime-" + hash, ["file", "-b", "--mime-type", rawPath], (out, code) => {
+            if (!root) return;
+            if (code === 0 && out.trim().startsWith("image/")) {
+                root._mimeValid = true;
+            } else {
+                root.artSource = "failed";
+            }
+        });
     }
 
     Timer {
